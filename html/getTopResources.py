@@ -318,7 +318,7 @@ if galaxy != '':
 		sqlStr1 += ' CASE WHEN COALESCE(rto.UTmax, rt1.UTmax) > 0 THEN ((UT - COALESCE(rto.UTmin, rt1.UTmin)) / (COALESCE(rto.UTmax, rt1.UTmax) - COALESCE(rto.UTmin, rt1.UTmin)))*100 ELSE NULL END AS UTperc,'
 		sqlStr1 += ' CASE WHEN COALESCE(rto.ERmax, rt1.ERmax) > 0 THEN ((ER - COALESCE(rto.ERmin, rt1.ERmin)) / (COALESCE(rto.ERmax, rt1.ERmax) - COALESCE(rto.ERmin, rt1.ERmin)))*100 ELSE NULL END AS ERperc,'
 		sqlStr1 += ' containerType, ' + orderVals + ', verified, verifiedBy, unavailable, unavailableBy' + favCols
-		sqlStr1 += ' FROM tResources INNER JOIN tResourceType rt ON tResources.resourceType = rt1.resourceType' + favJoin
+		sqlStr1 += ' FROM tResources INNER JOIN tResourceType rt1 ON tResources.resourceType = rt1.resourceType' + favJoin
 		sqlStr1 += ' LEFT JOIN tResourceTypeOverrides rto ON rto.resourceType = tResources.resourceType AND rto.galaxyID = tResources.galaxy'
 		if (resGroup != 'any' and resGroup != ''):
 			sqlStr1 += ' INNER JOIN (SELECT resourceType FROM tResourceTypeGroup WHERE resourceGroup="' + resGroup + '" GROUP BY resourceType) rtg ON tResources.resourceType = rtg.resourceType'
