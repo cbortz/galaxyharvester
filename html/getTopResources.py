@@ -240,15 +240,86 @@ if galaxy != '':
 			orderVals += getTypeOrder(craftingTab, objectType)
 		else:
 			# base order on average presence of stats in all schematics of all present stats with extra modifier if an extremely high stat other than CR or ER exists
-			orderVals += ' ((CASE WHEN CRmax > 0 THEN ((CR-CRmin) / (CRmax-CRmin))*.06 ELSE 0 END + CASE WHEN CDmax > 0 THEN ((CD-CDmin) / (CDmax-CDmin))*12.74 ELSE 0 END + CASE WHEN DRmax > 0 THEN ((DR-DRmin) / (DRmax-DRmin))*12.26 ELSE 0 END + CASE WHEN FLmax > 0 THEN ((FL-FLmin) / (FLmax-FLmin))*3.22 ELSE 0 END + CASE WHEN HRmax > 0 THEN ((HR-HRmin) / (HRmax-HRmin))*1.27 ELSE 0 END + CASE WHEN MAmax > 0 THEN ((MA-MAmin) / (MAmax-MAmin))*5.1 ELSE 0 END + CASE WHEN PEmax > 0 THEN ((PE-PEmin) / (PEmax-PEmin))*9.34 ELSE 0 END + CASE WHEN OQmax > 0 THEN ((OQ-OQmin) / (OQmax-OQmin))*30.64 ELSE 0 END + CASE WHEN SRmax > 0 THEN ((SR-SRmin) / (SRmax-SRmin))*9.16 ELSE 0 END + CASE WHEN UTmax > 0 THEN ((UT-UTmin) / (UTmax-UTmin))*16.2 ELSE 0 END)'
-			orderVals += ' / (CASE WHEN CRmax > 0 THEN .06 ELSE 0 END + CASE WHEN CDmax > 0 THEN 12.74 ELSE 0 END + CASE WHEN DRmax > 0 THEN 12.26 ELSE 0 END + CASE WHEN FLmax > 0 THEN 3.22 ELSE 0 END + CASE WHEN HRmax > 0 THEN 1.27 ELSE 0 END + CASE WHEN MAmax > 0 THEN 5.1 ELSE 0 END + CASE WHEN PEmax > 0 THEN 9.34 ELSE 0 END + CASE WHEN OQmax > 0 THEN 30.64 ELSE 0 END + CASE WHEN SRmax > 0 THEN 9.16 ELSE 0 END + CASE WHEN UTmax > 0 THEN 16.2 ELSE 0 END) * 1000)'
-			orderVals += ' + (CASE WHEN GREATEST(IFNULL((CD-CDmin) / (CDmax-CDmin),0), IFNULL((DR-DRmin) / (DRmax-DRmin),0), IFNULL((FL-FLmin) / (FLmax-FLmin),0), IFNULL((HR-HRmin) / (HRmax-HRmin),0), IFNULL((MA-MAmin) / (MAmax-MAmin),0), IFNULL((PE-PEmin) / (PEmax-PEmin),0), IFNULL((OQ-OQmin) / (OQmax-OQmin),0), IFNULL((SR-SRmin) / (SRmax-SRmin),0), IFNULL((UT-UTmin) / (UTmax-UTmin),0)) > .85 THEN 5 ELSE 0 END)'
-			orderVals += ' + (CASE WHEN GREATEST(IFNULL((CD-CDmin) / (CDmax-CDmin),0), IFNULL((DR-DRmin) / (DRmax-DRmin),0), IFNULL((FL-FLmin) / (FLmax-FLmin),0), IFNULL((HR-HRmin) / (HRmax-HRmin),0), IFNULL((MA-MAmin) / (MAmax-MAmin),0), IFNULL((PE-PEmin) / (PEmax-PEmin),0), IFNULL((OQ-OQmin) / (OQmax-OQmin),0), IFNULL((SR-SRmin) / (SRmax-SRmin),0), IFNULL((UT-UTmin) / (UTmax-UTmin),0)) > .98 THEN 20 ELSE 0 END)'
+			orderVals += """
+				(
+				  (
+				    CASE WHEN COALESCE(rto.CRmax, rt1.CRmax) > 0 THEN ((CR - COALESCE(rto.CRmin, rt1.CRmin)) / (COALESCE(rto.CRmax, rt1.CRmax) - COALESCE(rto.CRmin, rt1.CRmin)))*.06 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.CDmax, rt1.CDmax) > 0 THEN ((CD - COALESCE(rto.CDmin, rt1.CDmin)) / (COALESCE(rto.CDmax, rt1.CDmax) - COALESCE(rto.CDmin, rt1.CDmin)))*12.74 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.DRmax, rt1.DRmax) > 0 THEN ((DR - COALESCE(rto.DRmin, rt1.DRmin)) / (COALESCE(rto.DRmax, rt1.DRmax) - COALESCE(rto.DRmin, rt1.DRmin)))*12.26 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.FLmax, rt1.FLmax) > 0 THEN ((FL - COALESCE(rto.FLmin, rt1.FLmin)) / (COALESCE(rto.FLmax, rt1.FLmax) - COALESCE(rto.FLmin, rt1.FLmin)))*3.22 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.HRmax, rt1.HRmax) > 0 THEN ((HR - COALESCE(rto.HRmin, rt1.HRmin)) / (COALESCE(rto.HRmax, rt1.HRmax) - COALESCE(rto.HRmin, rt1.HRmin)))*1.27 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.MAmax, rt1.MAmax) > 0 THEN ((MA - COALESCE(rto.MAmin, rt1.MAmin)) / (COALESCE(rto.MAmax, rt1.MAmax) - COALESCE(rto.MAmin, rt1.MAmin)))*5.1 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.PEmax, rt1.PEmax) > 0 THEN ((PE - COALESCE(rto.PEmin, rt1.PEmin)) / (COALESCE(rto.PEmax, rt1.PEmax) - COALESCE(rto.PEmin, rt1.PEmin)))*9.34 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.OQmax, rt1.OQmax) > 0 THEN ((OQ - COALESCE(rto.OQmin, rt1.OQmin)) / (COALESCE(rto.OQmax, rt1.OQmax) - COALESCE(rto.OQmin, rt1.OQmin)))*30.64 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.SRmax, rt1.SRmax) > 0 THEN ((SR - COALESCE(rto.SRmin, rt1.SRmin)) / (COALESCE(rto.SRmax, rt1.SRmax) - COALESCE(rto.SRmin, rt1.SRmin)))*9.16 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.UTmax, rt1.UTmax) > 0 THEN ((UT - COALESCE(rto.UTmin, rt1.UTmin)) / (COALESCE(rto.UTmax, rt1.UTmax) - COALESCE(rto.UTmin, rt1.UTmin)))*16.2 ELSE 0 END
+				  )
+				  /
+				  (
+				    CASE WHEN COALESCE(rto.CRmax, rt1.CRmax) > 0 THEN .06 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.CDmax, rt1.CDmax) > 0 THEN 12.74 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.DRmax, rt1.DRmax) > 0 THEN 12.26 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.FLmax, rt1.FLmax) > 0 THEN 3.22 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.HRmax, rt1.HRmax) > 0 THEN 1.27 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.MAmax, rt1.MAmax) > 0 THEN 5.1 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.PEmax, rt1.PEmax) > 0 THEN 9.34 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.OQmax, rt1.OQmax) > 0 THEN 30.64 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.SRmax, rt1.SRmax) > 0 THEN 9.16 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.UTmax, rt1.UTmax) > 0 THEN 16.2 ELSE 0 END
+				  )
+				  *
+				  1000
+				  +
+				  (
+				    CASE WHEN GREATEST(
+				      IFNULL((CD - COALESCE(rto.CDmin, rt1.CDmin)) / (COALESCE(rto.CDmax, rt1.CDmax) - COALESCE(rto.CDmin, rt1.CDmin)),0),
+				      IFNULL((DR - COALESCE(rto.DRmin, rt1.DRmin)) / (COALESCE(rto.DRmax, rt1.DRmax) - COALESCE(rto.DRmin, rt1.DRmin)),0),
+				      IFNULL((FL - COALESCE(rto.FLmin, rt1.FLmin)) / (COALESCE(rto.FLmax, rt1.FLmax) - COALESCE(rto.FLmin, rt1.FLmin)),0),
+				      IFNULL((HR - COALESCE(rto.HRmin, rt1.HRmin)) / (COALESCE(rto.HRmax, rt1.HRmax) - COALESCE(rto.HRmin, rt1.HRmin)),0),
+				      IFNULL((MA - COALESCE(rto.MAmin, rt1.MAmin)) / (COALESCE(rto.MAmax, rt1.MAmax) - COALESCE(rto.MAmin, rt1.MAmin)),0),
+				      IFNULL((PE - COALESCE(rto.PEmin, rt1.PEmin)) / (COALESCE(rto.PEmax, rt1.PEmax) - COALESCE(rto.PEmin, rt1.PEmin)),0),
+				      IFNULL((OQ - COALESCE(rto.OQmin, rt1.OQmin)) / (COALESCE(rto.OQmax, rt1.OQmax) - COALESCE(rto.OQmin, rt1.OQmin)),0),
+				      IFNULL((SR - COALESCE(rto.SRmin, rt1.SRmin)) / (COALESCE(rto.SRmax, rt1.SRmax) - COALESCE(rto.SRmin, rt1.SRmin)),0),
+				      IFNULL((UT - COALESCE(rto.UTmin, rt1.UTmin)) / (COALESCE(rto.UTmax, rt1.UTmax) - COALESCE(rto.UTmin, rt1.UTmin)),0)
+				    ) > .85 THEN 5 ELSE 0 END
+				  )
+				  +
+				  (
+				    CASE WHEN GREATEST(
+				      IFNULL((CD - COALESCE(rto.CDmin, rt1.CDmin)) / (COALESCE(rto.CDmax, rt1.CDmax) - COALESCE(rto.CDmin, rt1.CDmin)),0),
+				      IFNULL((DR - COALESCE(rto.DRmin, rt1.DRmin)) / (COALESCE(rto.DRmax, rt1.DRmax) - COALESCE(rto.DRmin, rt1.DRmin)),0),
+				      IFNULL((FL - COALESCE(rto.FLmin, rt1.FLmin)) / (COALESCE(rto.FLmax, rt1.FLmax) - COALESCE(rto.FLmin, rt1.FLmin)),0),
+				      IFNULL((HR - COALESCE(rto.HRmin, rt1.HRmin)) / (COALESCE(rto.HRmax, rt1.HRmax) - COALESCE(rto.HRmin, rt1.HRmin)),0),
+				      IFNULL((MA - COALESCE(rto.MAmin, rt1.MAmin)) / (COALESCE(rto.MAmax, rt1.MAmax) - COALESCE(rto.MAmin, rt1.MAmin)),0),
+				      IFNULL((PE - COALESCE(rto.PEmin, rt1.PEmin)) / (COALESCE(rto.PEmax, rt1.PEmax) - COALESCE(rto.PEmin, rt1.PEmin)),0),
+				      IFNULL((OQ - COALESCE(rto.OQmin, rt1.OQmin)) / (COALESCE(rto.OQmax, rt1.OQmax) - COALESCE(rto.OQmin, rt1.OQmin)),0),
+				      IFNULL((SR - COALESCE(rto.SRmin, rt1.SRmin)) / (COALESCE(rto.SRmax, rt1.SRmax) - COALESCE(rto.SRmin, rt1.SRmin)),0),
+				      IFNULL((UT - COALESCE(rto.UTmin, rt1.UTmin)) / (COALESCE(rto.UTmax, rt1.UTmax) - COALESCE(rto.UTmin, rt1.UTmin)),0)
+				    ) > .98 THEN 20 ELSE 0 END
+				  )
+				)
+			"""
+			# orderVals += ' ((CASE WHEN CRmax > 0 THEN ((CR-CRmin) / (CRmax-CRmin))*.06 ELSE 0 END + CASE WHEN CDmax > 0 THEN ((CD-CDmin) / (CDmax-CDmin))*12.74 ELSE 0 END + CASE WHEN DRmax > 0 THEN ((DR-DRmin) / (DRmax-DRmin))*12.26 ELSE 0 END + CASE WHEN FLmax > 0 THEN ((FL-FLmin) / (FLmax-FLmin))*3.22 ELSE 0 END + CASE WHEN HRmax > 0 THEN ((HR-HRmin) / (HRmax-HRmin))*1.27 ELSE 0 END + CASE WHEN MAmax > 0 THEN ((MA-MAmin) / (MAmax-MAmin))*5.1 ELSE 0 END + CASE WHEN PEmax > 0 THEN ((PE-PEmin) / (PEmax-PEmin))*9.34 ELSE 0 END + CASE WHEN OQmax > 0 THEN ((OQ-OQmin) / (OQmax-OQmin))*30.64 ELSE 0 END + CASE WHEN SRmax > 0 THEN ((SR-SRmin) / (SRmax-SRmin))*9.16 ELSE 0 END + CASE WHEN UTmax > 0 THEN ((UT-UTmin) / (UTmax-UTmin))*16.2 ELSE 0 END)'
+			# orderVals += ' / (CASE WHEN CRmax > 0 THEN .06 ELSE 0 END + CASE WHEN CDmax > 0 THEN 12.74 ELSE 0 END + CASE WHEN DRmax > 0 THEN 12.26 ELSE 0 END + CASE WHEN FLmax > 0 THEN 3.22 ELSE 0 END + CASE WHEN HRmax > 0 THEN 1.27 ELSE 0 END + CASE WHEN MAmax > 0 THEN 5.1 ELSE 0 END + CASE WHEN PEmax > 0 THEN 9.34 ELSE 0 END + CASE WHEN OQmax > 0 THEN 30.64 ELSE 0 END + CASE WHEN SRmax > 0 THEN 9.16 ELSE 0 END + CASE WHEN UTmax > 0 THEN 16.2 ELSE 0 END) * 1000)'
+			# orderVals += ' + (CASE WHEN GREATEST(IFNULL((CD-CDmin) / (CDmax-CDmin),0), IFNULL((DR-DRmin) / (DRmax-DRmin),0), IFNULL((FL-FLmin) / (FLmax-FLmin),0), IFNULL((HR-HRmin) / (HRmax-HRmin),0), IFNULL((MA-MAmin) / (MAmax-MAmin),0), IFNULL((PE-PEmin) / (PEmax-PEmin),0), IFNULL((OQ-OQmin) / (OQmax-OQmin),0), IFNULL((SR-SRmin) / (SRmax-SRmin),0), IFNULL((UT-UTmin) / (UTmax-UTmin),0)) > .85 THEN 5 ELSE 0 END)'
+			# orderVals += ' + (CASE WHEN GREATEST(IFNULL((CD-CDmin) / (CDmax-CDmin),0), IFNULL((DR-DRmin) / (DRmax-DRmin),0), IFNULL((FL-FLmin) / (FLmax-FLmin),0), IFNULL((HR-HRmin) / (HRmax-HRmin),0), IFNULL((MA-MAmin) / (MAmax-MAmin),0), IFNULL((PE-PEmin) / (PEmax-PEmin),0), IFNULL((OQ-OQmin) / (OQmax-OQmin),0), IFNULL((SR-SRmin) / (SRmax-SRmin),0), IFNULL((UT-UTmin) / (UTmax-UTmin),0)) > .98 THEN 20 ELSE 0 END)'
 
 		sqlStr1 = 'SELECT spawnID, spawnName, tResources.galaxy, entered, enteredBy, tResources.resourceType, resourceTypeName, resourceGroup,'
 		sqlStr1 += ' CR, CD, DR, FL, HR, MA, PE, OQ, SR, UT, ER,'
-		sqlStr1 += ' CASE WHEN CRmax > 0 THEN ((CR-CRmin) / (CRmax-CRmin))*100 ELSE NULL END AS CRperc, CASE WHEN CDmax > 0 THEN ((CD-CDmin) / (CDmax-CDmin))*100 ELSE NULL END AS CDperc, CASE WHEN DRmax > 0 THEN ((DR-DRmin) / (DRmax-DRmin))*100 ELSE NULL END AS DRperc, CASE WHEN FLmax > 0 THEN ((FL-FLmin) / (FLmax-FLmin))*100 ELSE NULL END AS FLperc, CASE WHEN HRmax > 0 THEN ((HR-HRmin) / (HRmax-HRmin))*100 ELSE NULL END AS HRperc, CASE WHEN MAmax > 0 THEN ((MA-MAmin) / (MAmax-MAmin))*100 ELSE NULL END AS MAperc, CASE WHEN PEmax > 0 THEN ((PE-PEmin) / (PEmax-PEmin))*100 ELSE NULL END AS PEperc, CASE WHEN OQmax > 0 THEN ((OQ-OQmin) / (OQmax-OQmin))*100 ELSE NULL END AS OQperc, CASE WHEN SRmax > 0 THEN ((SR-SRmin) / (SRmax-SRmin))*100 ELSE NULL END AS SRperc, CASE WHEN UTmax > 0 THEN ((UT-UTmin) / (UTmax-UTmin))*100 ELSE NULL END AS UTperc, CASE WHEN ERmax > 0 THEN ((ER-ERmin) / (ERmax-ERmin))*100 ELSE NULL END AS ERperc,'
-		sqlStr1 += ' containerType, ' + orderVals + ', verified, verifiedBy, unavailable, unavailableBy' + favCols + ' FROM tResources INNER JOIN tResourceType ON tResources.resourceType = tResourceType.resourceType' + favJoin
+		sqlStr1 += ' CASE WHEN COALESCE(rto.CRmax, rt1.CRmax) > 0 THEN ((CR - COALESCE(rto.CRmin, rt1.CRmin)) / (COALESCE(rto.CRmax, rt1.CRmax) - COALESCE(rto.CRmin, rt1.CRmin)))*100 ELSE NULL END AS CRperc,'
+		sqlStr1 += ' CASE WHEN COALESCE(rto.CDmax, rt1.CDmax) > 0 THEN ((CD - COALESCE(rto.CDmin, rt1.CDmin)) / (COALESCE(rto.CDmax, rt1.CDmax) - COALESCE(rto.CDmin, rt1.CDmin)))*100 ELSE NULL END AS CDperc,'
+		sqlStr1 += ' CASE WHEN COALESCE(rto.DRmax, rt1.DRmax) > 0 THEN ((DR - COALESCE(rto.DRmin, rt1.DRmin)) / (COALESCE(rto.DRmax, rt1.DRmax) - COALESCE(rto.DRmin, rt1.DRmin)))*100 ELSE NULL END AS DRperc,'
+		sqlStr1 += ' CASE WHEN COALESCE(rto.FLmax, rt1.FLmax) > 0 THEN ((FL - COALESCE(rto.FLmin, rt1.FLmin)) / (COALESCE(rto.FLmax, rt1.FLmax) - COALESCE(rto.FLmin, rt1.FLmin)))*100 ELSE NULL END AS FLperc,'
+		sqlStr1 += ' CASE WHEN COALESCE(rto.HRmax, rt1.HRmax) > 0 THEN ((HR - COALESCE(rto.HRmin, rt1.HRmin)) / (COALESCE(rto.HRmax, rt1.HRmax) - COALESCE(rto.HRmin, rt1.HRmin)))*100 ELSE NULL END AS HRperc,'
+		sqlStr1 += ' CASE WHEN COALESCE(rto.MAmax, rt1.MAmax) > 0 THEN ((MA - COALESCE(rto.MAmin, rt1.MAmin)) / (COALESCE(rto.MAmax, rt1.MAmax) - COALESCE(rto.MAmin, rt1.MAmin)))*100 ELSE NULL END AS MAperc,'
+		sqlStr1 += ' CASE WHEN COALESCE(rto.PEmax, rt1.PEmax) > 0 THEN ((PE - COALESCE(rto.PEmin, rt1.PEmin)) / (COALESCE(rto.PEmax, rt1.PEmax) - COALESCE(rto.PEmin, rt1.PEmin)))*100 ELSE NULL END AS PEperc,'
+		sqlStr1 += ' CASE WHEN COALESCE(rto.OQmax, rt1.OQmax) > 0 THEN ((OQ - COALESCE(rto.OQmin, rt1.OQmin)) / (COALESCE(rto.OQmax, rt1.OQmax) - COALESCE(rto.OQmin, rt1.OQmin)))*100 ELSE NULL END AS OQperc,'
+		sqlStr1 += ' CASE WHEN COALESCE(rto.SRmax, rt1.SRmax) > 0 THEN ((SR - COALESCE(rto.SRmin, rt1.SRmin)) / (COALESCE(rto.SRmax, rt1.SRmax) - COALESCE(rto.SRmin, rt1.SRmin)))*100 ELSE NULL END AS SRperc,'
+		sqlStr1 += ' CASE WHEN COALESCE(rto.UTmax, rt1.UTmax) > 0 THEN ((UT - COALESCE(rto.UTmin, rt1.UTmin)) / (COALESCE(rto.UTmax, rt1.UTmax) - COALESCE(rto.UTmin, rt1.UTmin)))*100 ELSE NULL END AS UTperc,'
+		sqlStr1 += ' CASE WHEN COALESCE(rto.ERmax, rt1.ERmax) > 0 THEN ((ER - COALESCE(rto.ERmin, rt1.ERmin)) / (COALESCE(rto.ERmax, rt1.ERmax) - COALESCE(rto.ERmin, rt1.ERmin)))*100 ELSE NULL END AS ERperc,'
+		sqlStr1 += ' containerType, ' + orderVals + ', verified, verifiedBy, unavailable, unavailableBy' + favCols
+		sqlStr1 += ' FROM tResources INNER JOIN tResourceType rt ON tResources.resourceType = rt1.resourceType' + favJoin
+		sqlStr1 += ' LEFT JOIN tResourceTypeOverrides rto ON rto.resourceType = tResources.resourceType AND rto.galaxyID = tResources.galaxy'
 		if (resGroup != 'any' and resGroup != ''):
 			sqlStr1 += ' INNER JOIN (SELECT resourceType FROM tResourceTypeGroup WHERE resourceGroup="' + resGroup + '" GROUP BY resourceType) rtg ON tResources.resourceType = rtg.resourceType'
 		if unavailable == "1":
@@ -258,9 +329,9 @@ if galaxy != '':
 		if (resType != 'any' and resType != ''):
 			sqlStr1 += ' AND tResources.resourceType = "' + resType + '"'
 		if prof.isdigit() and prof != '0':
-			sqlStr1 += ' AND tResourceType.resourceGroup IN (' + getProfResGroups(prof) + ')'
+			sqlStr1 += ' AND rt1.resourceGroup IN (' + getProfResGroups(prof) + ')'
 		if craftingTab.isdigit():
-			sqlStr1 += ' AND tResourceType.resourceGroup IN (' + getTypeResGroups(craftingTab, objectType) + ')'
+			sqlStr1 += ' AND rt1.resourceGroup IN (' + getTypeResGroups(craftingTab, objectType) + ')'
 		sqlStr1 += ' ORDER BY'
 		sqlStr1 += orderVals
 

@@ -325,11 +325,40 @@ if sort == "quality":
 	if len(RES_STATS) == len(weights):
 		for i in range(len(weights)):
 			if weights[i].isdigit():
-				weightStr = weightStr + ("+CASE WHEN {0}max > 0 THEN {0}*(" + str(weights[i]) + "/100) ELSE 0 END").format(RES_STATS[i])
+				weightStr = weightStr + ("+CASE WHEN COALESCE(rto.{0}max, rt1.{0}max) > 0 THEN {0}*(" + str(weights[i]) + "/100) ELSE 0 END").format(RES_STATS[i])
 
 		if weightStr == "":
-			weightStr += ' ((CASE WHEN CRmax > 0 THEN CR*.06 ELSE 0 END + CASE WHEN CDmax > 0 THEN CD*12.74 ELSE 0 END + CASE WHEN DRmax > 0 THEN DR*12.26 ELSE 0 END + CASE WHEN FLmax > 0 THEN FL*3.22 ELSE 0 END + CASE WHEN HRmax > 0 THEN HR*1.27 ELSE 0 END + CASE WHEN MAmax > 0 THEN MA*5.1 ELSE 0 END + CASE WHEN PEmax > 0 THEN PE*9.34 ELSE 0 END + CASE WHEN OQmax > 0 THEN OQ*30.64 ELSE 0 END + CASE WHEN SRmax > 0 THEN SR*9.16 ELSE 0 END + CASE WHEN UTmax > 0 THEN UT*16.2 ELSE 0 END)'
-			weightStr += ' / (CASE WHEN CRmax > 0 THEN .06 ELSE 0 END + CASE WHEN CDmax > 0 THEN 12.74 ELSE 0 END + CASE WHEN DRmax > 0 THEN 12.26 ELSE 0 END + CASE WHEN FLmax > 0 THEN 3.22 ELSE 0 END + CASE WHEN HRmax > 0 THEN 1.27 ELSE 0 END + CASE WHEN MAmax > 0 THEN 5.1 ELSE 0 END + CASE WHEN PEmax > 0 THEN 9.34 ELSE 0 END + CASE WHEN OQmax > 0 THEN 30.64 ELSE 0 END + CASE WHEN SRmax > 0 THEN 9.16 ELSE 0 END + CASE WHEN UTmax > 0 THEN 16.2 ELSE 0 END))'
+			weightStr += """
+				(
+				  (
+				    CASE WHEN COALESCE(rto.CRmax, rt1.CRmax) > 0 THEN CR*.06 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.CDmax, rt1.CDmax) > 0 THEN CD*12.74 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.DRmax, rt1.DRmax) > 0 THEN DR*12.26 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.FLmax, rt1.FLmax) > 0 THEN FL*3.22 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.HRmax, rt1.HRmax) > 0 THEN HR*1.27 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.MAmax, rt1.MAmax) > 0 THEN MA*5.1 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.PEmax, rt1.PEmax) > 0 THEN PE*9.34 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.OQmax, rt1.OQmax) > 0 THEN OQ*30.64 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.SRmax, rt1.SRmax) > 0 THEN SR*9.16 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.UTmax, rt1.UTmax) > 0 THEN UT*16.2 ELSE 0 END
+				  )
+				  /
+				  (
+				    CASE WHEN COALESCE(rto.CRmax, rt1.CRmax) > 0 THEN .06 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.CDmax, rt1.CDmax) > 0 THEN 12.74 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.DRmax, rt1.DRmax) > 0 THEN 12.26 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.FLmax, rt1.FLmax) > 0 THEN 3.22 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.HRmax, rt1.HRmax) > 0 THEN 1.27 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.MAmax, rt1.MAmax) > 0 THEN 5.1 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.PEmax, rt1.PEmax) > 0 THEN 9.34 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.OQmax, rt1.OQmax) > 0 THEN 30.64 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.SRmax, rt1.SRmax) > 0 THEN 9.16 ELSE 0 END +
+				    CASE WHEN COALESCE(rto.UTmax, rt1.UTmax) > 0 THEN 16.2 ELSE 0 END
+				  )
+				)
+			"""
+			# weightStr += ' ((CASE WHEN CRmax > 0 THEN CR*.06 ELSE 0 END + CASE WHEN CDmax > 0 THEN CD*12.74 ELSE 0 END + CASE WHEN DRmax > 0 THEN DR*12.26 ELSE 0 END + CASE WHEN FLmax > 0 THEN FL*3.22 ELSE 0 END + CASE WHEN HRmax > 0 THEN HR*1.27 ELSE 0 END + CASE WHEN MAmax > 0 THEN MA*5.1 ELSE 0 END + CASE WHEN PEmax > 0 THEN PE*9.34 ELSE 0 END + CASE WHEN OQmax > 0 THEN OQ*30.64 ELSE 0 END + CASE WHEN SRmax > 0 THEN SR*9.16 ELSE 0 END + CASE WHEN UTmax > 0 THEN UT*16.2 ELSE 0 END)'
+			# weightStr += ' / (CASE WHEN CRmax > 0 THEN .06 ELSE 0 END + CASE WHEN CDmax > 0 THEN 12.74 ELSE 0 END + CASE WHEN DRmax > 0 THEN 12.26 ELSE 0 END + CASE WHEN FLmax > 0 THEN 3.22 ELSE 0 END + CASE WHEN HRmax > 0 THEN 1.27 ELSE 0 END + CASE WHEN MAmax > 0 THEN 5.1 ELSE 0 END + CASE WHEN PEmax > 0 THEN 9.34 ELSE 0 END + CASE WHEN OQmax > 0 THEN 30.64 ELSE 0 END + CASE WHEN SRmax > 0 THEN 9.16 ELSE 0 END + CASE WHEN UTmax > 0 THEN 16.2 ELSE 0 END))'
 		else:
 			weightStr = weightStr[1:]
 
