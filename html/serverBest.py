@@ -34,9 +34,11 @@ def getPosition(conn, spawnID, galaxy, statWeights, resourceGroup, serverBestMod
     # calculate column sort by based on quality weights
     for k, v in statWeights.items():
         weightVal = '%.2f' % v
-        obyStr = ''.join((obyStr, '+CASE WHEN ', k, 'max > 0 THEN (', k, ' / 1000)*', weightVal, ' ELSE ', weightVal, '*.25 END'))
+        # obyStr = ''.join((obyStr, '+CASE WHEN ', k, 'max > 0 THEN (', k, ' / 1000)*', weightVal, ' ELSE ', weightVal, '*.25 END'))
+        obyStr += '+CASE WHEN COALESCE(rto.{0}max, rt1.{0}max) > 0 THEN ({0} / 1000)*{1} ELSE {1}*.25 END'.format(k, weightVal)
         obyStr2 = ''.join((obyStr2, '+', weightVal))
-        maxCheckStr = ''.join((maxCheckStr, '+', k, 'max'))
+        # maxCheckStr = ''.join((maxCheckStr, '+', k, 'max'))
+        maxCheckStr += '+COALESCE(rto.{0}max, rt1.{0}max)'.format(k)
 
     if (obyStr != ''):
         obyStr = obyStr[1:]
@@ -51,10 +53,31 @@ def getPosition(conn, spawnID, galaxy, statWeights, resourceGroup, serverBestMod
     else:
         minimumPercentOfBest = .95
 
-    sqlStr1 = ''.join(('SELECT spawnID, (', obyStr, ') / (', obyStr2, ') AS overallScore, ', maxCheckStr, ' FROM tResources INNER JOIN tResourceType ON tResources.resourceType = tResourceType.resourceType',
-              ' INNER JOIN (SELECT resourceType FROM tResourceTypeGroup WHERE resourceGroup="', resourceGroup, '" OR resourceType="', resourceGroup, '" GROUP BY resourceType) rtg ON tResources.resourceType = rtg.resourceType'
-              ' WHERE galaxy=', str(galaxy), ' ORDER BY (', obyStr, ') / (' + obyStr2 + ')'
-              ' DESC LIMIT 8;'))
+    # sqlStr1 = ''.join(('SELECT spawnID, (', obyStr, ') / (', obyStr2, ') AS overallScore, ', maxCheckStr, ' FROM tResources INNER JOIN tResourceType ON tResources.resourceType = tResourceType.resourceType',
+    #           ' INNER JOIN (SELECT resourceType FROM tResourceTypeGroup WHERE resourceGroup="', resourceGroup, '" OR resourceType="', resourceGroup, '" GROUP BY resourceType) rtg ON tResources.resourceType = rtg.resourceType'
+    #           ' WHERE galaxy=', str(galaxy), ' ORDER BY (', obyStr, ') / (' + obyStr2 + ')'
+    #           ' DESC LIMIT 8;'))
+
+    sqlStr1 = """
+        SELECT
+            spawnID,
+            ({0}) / ({1}) AS overallScore,
+            {2}
+        FROM
+            tResources
+            INNER JOIN tResourceType rt1 ON tResources.resourceType = rt1.resourceType
+            LEFT JOIN tResourceTypeOverrides rto ON tResources.resourceType = rto.resourceType AND rto.galaxyID = tResources.galaxy
+            INNER JOIN (
+                    SELECT resourceType
+                    FROM tResourceTypeGroup
+                    WHERE resourceGroup="{3}" OR resourceType="{3}"
+                    GROUP BY resourceType
+                ) rtg ON tResources.resourceType = rtg.resourceType
+        WHERE galaxy={4}
+        ORDER BY ({0}) / ({1})
+        DESC LIMIT 8;
+    """.format(obyStr, obyStr2, maxCheckStr, resourceGroup, str(galaxy))
+
     cursor = conn.cursor()
 
     spawnPos = 0
