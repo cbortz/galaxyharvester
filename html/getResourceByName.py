@@ -97,7 +97,6 @@ def getSpawnXML(spawnName, galaxy, currentUser, logged_state):
 		favCols = ', NULL, NULL'
 
 	if (cursor):
-		# spawnSQL = ''.join(('SELECT spawnID, tResources.resourceType, resourceTypeName, CR, CD, DR, FL, HR, MA, PE, OQ, SR, UT, ER, CRmin, CDmin, DRmin, FLmin, HRmin, MAmin, PEmin, OQmin, SRmin, UTmin, ERmin, CRmax, CDmax, DRmax, FLmax, HRmax, MAmax, PEmax, OQmax, SRmax, UTmax, ERmax, containerType, entered, enteredBy, unavailable, unavailableBy, verified, verifiedBy, (SELECT Max(concentration) FROM tWaypoint WHERE tWaypoint.spawnID=tResources.spawnID AND shareLevel=256) AS wpMaxConc', favCols, ' FROM tResources INNER JOIN tResourceType rt1 ON tResources.resourceType = rt1.resourceType', joinStr, ' WHERE galaxy=', galaxy, ' AND spawnName="', spawnName, '";'))
 		spawnSQL = """
 			SELECT
 				spawnID, tResources.resourceType, resourceTypeName, CR, CD, DR, FL, HR, MA, PE, OQ, SR, UT, ER,
