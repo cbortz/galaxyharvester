@@ -99,8 +99,8 @@ def getTypeOrder(tabID, typeID):
 		# calculate column sort by based on quality weights
 		for k, v in stats.items():
 			weightVal = '%.2f' % (v / weightTotal * 200)
-			obyStr = obyStr + '+CASE WHEN ' + k + 'max > 0 THEN ((' + k + '-' + k + 'min) / (' + k + 'max-' + k + 'min))*' + weightVal + ' ELSE ' + weightVal + '/2 END'
-			obyStr2 = obyStr2 + '+' + weightVal
+			obyStr += '+CASE WHEN COALESCE(rto.{0}max, rt1.{0}max) > 0 THEN (({0} - COALESCE(rto.{0}min, rt1.{0}min)) / (COALESCE(rto.{0}max, rt1.{0}max) - COALESCE(rto.{0}min, rt1.{0}min)))*{1} ELSE {1}/2 END'.format(k, weightVal)
+			obyStr2 += '+' + weightVal
 		if len(obyStr)>1:
 			obyStr = obyStr[1:]
 		if len(obyStr2)>1:
