@@ -53,11 +53,6 @@ def getPosition(conn, spawnID, galaxy, statWeights, resourceGroup, serverBestMod
     else:
         minimumPercentOfBest = .95
 
-    # sqlStr1 = ''.join(('SELECT spawnID, (', obyStr, ') / (', obyStr2, ') AS overallScore, ', maxCheckStr, ' FROM tResources INNER JOIN tResourceType ON tResources.resourceType = tResourceType.resourceType',
-    #           ' INNER JOIN (SELECT resourceType FROM tResourceTypeGroup WHERE resourceGroup="', resourceGroup, '" OR resourceType="', resourceGroup, '" GROUP BY resourceType) rtg ON tResources.resourceType = rtg.resourceType'
-    #           ' WHERE galaxy=', str(galaxy), ' ORDER BY (', obyStr, ') / (' + obyStr2 + ')'
-    #           ' DESC LIMIT 8;'))
-
     sqlStr1 = """
         SELECT
             spawnID,
