@@ -91,7 +91,7 @@ def getSpawnXML(spawnName, galaxy, currentUser, logged_state):
 		result = "Error: could not connect to database"
 
 	if logged_state == 1:
-		joinStr = ''.join((joinStr, ' LEFT JOIN (SELECT itemID, favGroup, despawnAlert FROM tFavorites WHERE userID="', currentUser, '" AND favType=1) favs ON tResources.spawnID = favs.itemID'))
+		joinStr += 'LEFT JOIN (SELECT itemID, favGroup, despawnAlert FROM tFavorites WHERE userID=%(currentUser)s AND favType=1) favs ON tResources.spawnID = favs.itemID'
 		favCols = ', favGroup, despawnAlert'
 	else:
 		favCols = ', NULL, NULL'
@@ -123,15 +123,15 @@ def getSpawnXML(spawnName, galaxy, currentUser, logged_state):
 				COALESCE(rto.UTmax, rt1.UTmax) AS UTmax,
 				COALESCE(rto.ERmax, rt1.ERmax) AS ERmax,
 				containerType, entered, enteredBy, unavailable, unavailableBy, verified, verifiedBy,
-				(SELECT Max(concentration) FROM tWaypoint WHERE tWaypoint.spawnID=tResources.spawnID AND shareLevel=256) AS wpMaxConc{0}
+				(SELECT Max(concentration) FROM tWaypoint WHERE tWaypoint.spawnID=tResources.spawnID AND shareLevel=256) AS wpMaxConc{favCols}
 			FROM tResources
 				INNER JOIN tResourceType rt1 ON tResources.resourceType = rt1.resourceType
 				LEFT JOIN tResourceTypeOverrides rto ON tResources.resourceType = rto.resourceType AND tResources.galaxy = rto.galaxyID
-				{1}
-			WHERE galaxy={2} AND spawnName="{3}";
-		""".format(favCols, joinStr, galaxy, spawnName)
+				{joinStr}
+			WHERE galaxy= %(galaxy)s AND spawnName = %(spawnName)s;
+		""".format(favCols=favCols, joinStr=joinStr)
 
-		cursor.execute(spawnSQL)
+		cursor.execute(spawnSQL, {'galaxy': galaxy, 'spawnName': spawnName, 'currentUser': currentUser})
 		row = cursor.fetchone()
 
 		if (row != None):
