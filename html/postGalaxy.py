@@ -31,6 +31,7 @@ import pymysql
 import smtplib
 from email.message import EmailMessage
 from xml.dom import minidom
+from urllib.parse import parse_qs
 import ghNames
 import ghShared
 sys.path.append("../")
@@ -78,7 +79,45 @@ galaxyNGE = form.getfirst("galaxyNGE", "0")
 galaxyWebsite = form.getfirst("galaxyWebsite", "")
 galaxyPlanets = form.getfirst("galaxyPlanets", "")
 galaxyResourceTypes = form.getfirst("galaxyResourceTypes", "")
+galaxyResourceTypeOverrides = form.getlist("galaxyResourceTypeOverrides[]")
+sys.stderr.write(str(form.keys))
+sys.stderr.write("\n")
+sys.stderr.write(str(galaxyResourceTypeOverrides))
+sys.stderr.write("\n")
 galaxyAdmins = form.getfirst("galaxyAdmins", "")
+
+for override_str in galaxyResourceTypeOverrides:
+	override = parse_qs(override_str)
+
+	override = {
+		'CDmax': next(iter(override.get('CDmax', [])), ''),
+		'CDmin': next(iter(override.get('CDmin', [])), ''),
+		'CRmax': next(iter(override.get('CRmax', [])), ''),
+		'CRmin': next(iter(override.get('CRmin', [])), ''),
+		'DRmax': next(iter(override.get('DRmax', [])), ''),
+		'DRmin': next(iter(override.get('DRmin', [])), ''),
+		'ERmax': next(iter(override.get('ERmax', [])), ''),
+		'ERmin': next(iter(override.get('ERmin', [])), ''),
+		'FLmax': next(iter(override.get('FLmax', [])), ''),
+		'FLmin': next(iter(override.get('FLmin', [])), ''),
+		'HRmax': next(iter(override.get('HRmax', [])), ''),
+		'HRmin': next(iter(override.get('HRmin', [])), ''),
+		'MAmax': next(iter(override.get('MAmax', [])), ''),
+		'MAmin': next(iter(override.get('MAmin', [])), ''),
+		'OQmax': next(iter(override.get('OQmax', [])), ''),
+		'OQmin': next(iter(override.get('OQmin', [])), ''),
+		'PEmax': next(iter(override.get('PEmax', [])), ''),
+		'PEmin': next(iter(override.get('PEmin', [])), ''),
+		'SRmax': next(iter(override.get('SRmax', [])), ''),
+		'SRmin': next(iter(override.get('SRmin', [])), ''),
+		'UTmax': next(iter(override.get('UTmax', [])), ''),
+		'UTmin': next(iter(override.get('UTmin', [])), '')
+	}
+
+	sys.stderr.write(str(override))
+
+	sys.stderr.write("\n")
+
 # escape input to prevent sql injection
 sid = dbShared.dbInsertSafe(sid)
 galaxy = dbShared.dbInsertSafe(galaxy)
