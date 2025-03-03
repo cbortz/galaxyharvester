@@ -23,6 +23,7 @@
 import sys
 import pymysql
 import dbShared
+import ghShared
 import optparse
 
 # Return position among server best
@@ -77,7 +78,7 @@ def getPosition(conn, spawnID, galaxy, statWeights, resourceGroup, serverBestMod
 
     spawnPos = 0
     if (cursor):
-        cursor.execute(sqlStr1, {'resourceGroup': resourceGroup, 'galaxy': galaxy})
+        cursor.execute(sqlStr1, {'resourceGroup': resourceGroup, 'galaxy': ghShared.tryInt(galaxy)})
         row = cursor.fetchone()
         # Check is spawn in top 8 and within 5% quality of 1st
         rowPos = 1

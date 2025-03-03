@@ -27,6 +27,7 @@ import dbSession
 import dbShared
 import cgi
 import pymysql
+import ghShared
 import ghLists
 from xml.dom import minidom
 import time
@@ -131,7 +132,7 @@ def getSpawnXML(spawnName, galaxy, currentUser, logged_state):
 			WHERE galaxy= %(galaxy)s AND spawnName = %(spawnName)s;
 		""".format(favCols=favCols, joinStr=joinStr)
 
-		cursor.execute(spawnSQL, {'galaxy': galaxy, 'spawnName': spawnName, 'currentUser': currentUser})
+		cursor.execute(spawnSQL, {'galaxy': ghShared.tryInt(galaxy), 'spawnName': spawnName, 'currentUser': currentUser})
 		row = cursor.fetchone()
 
 		if (row != None):

@@ -27,6 +27,7 @@ import dbSession
 import dbShared
 import cgi
 import pymysql
+import ghShared
 import ghLists
 import ghObjects
 #
@@ -109,7 +110,7 @@ if galaxy != '':
 			ORDER BY entered DESC LIMIT 5;
 		""".format(favCols=favCols, favJoin=favJoin)
 
-		cursor.execute(sqlStr, {'galaxy': galaxy, 'currentUser': currentUser})
+		cursor.execute(sqlStr, {'galaxy': ghShared.tryInt(galaxy), 'currentUser': currentUser})
 		row = cursor.fetchone()
 		while (row != None):
 			s = ghObjects.resourceSpawn()
