@@ -3,6 +3,10 @@
 <html lang="en"><head><title>Galaxy Admin - Galaxy Harvester</title>
 {{ blocks.commonResources(uiTheme, enableCAPTCHA) }}
 <script type="text/javascript">
+template = `
+  {{ resourceTypeOverrideHTMLTemplate }}
+`;
+console.log(template);
 $(document).ready(function() {
     $("#galaxySel").val(getCookie("galaxy",defaultGalaxy));
     $("#galaxyStatus").val("{{ galaxyState }}");
@@ -95,7 +99,17 @@ function saveGalaxy() {
   });
 
   // send data
-  $.post(BASE_SCRIPT_URL + 'postGalaxy.py', { galaxyID: '{{ galaxyID }}', galaxyName: $('#galaxyName').val(), galaxyState: $('#galaxyStatus').val(), galaxyNGE: $('#oGalaxyNGE').attr('checked'), galaxyWebsite: $('#galaxyWebsite').val(), galaxyPlanets: planets, galaxyResourceTypes: resourceTypes, galaxyAdmins: admins },
+  $.post(BASE_SCRIPT_URL + 'postGalaxy.py', {
+      galaxyID: '{{ galaxyID }}',
+      galaxyName: $('#galaxyName').val(),
+      galaxyState: $('#galaxyStatus').val(),
+      galaxyNGE: $('#oGalaxyNGE').attr('checked'),
+      galaxyWebsite: $('#galaxyWebsite').val(),
+      galaxyPlanets: planets,
+      galaxyResourceTypes: resourceTypes,
+      galaxyAdmins: admins,
+      galaxyResourceTypeOverrides: ["CRmax=1&CRmin=300", "OQmin=3&OQmax=500"]
+    },
     function(data) {
       var result = $(data).find('resultText').eq(0).text();
       $('#busyImgSave').css('display','none');
@@ -155,54 +169,7 @@ function saveGalaxy() {
           <tr><td colspan=3><h3 title="If your server has additional custom resource min/max values, set them here.">Custom Resource Type Min/Max:</h3></td></tr>
           <tr>
             <td colspan="3">
-              <table id="">
-                <thead>
-                  <tr>
-                    <td></td>
-                    <td>ER</td>
-                    <td>CR</td>
-                    <td>CD</td>
-                    <td>DR</td>
-                    <td>FL</td>
-                    <td>HR</td>
-                    <td>MA</td>
-                    <td>PE</td>
-                    <td>OQ</td>
-                    <td>SR</td>
-                    <td>UT</td>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>Min</td>
-                    <td><input type="text" size="5" maxlength="4" id="ERmin0" name="ERmin0" disabled="disabled"></td>
-                    <td><input type="text" size="5" maxlength="4" id="CRmin0" name="CRmin0"></td>
-                    <td><input type="text" size="5" maxlength="4" id="CDmin0" name="CDmin0"></td>
-                    <td><input type="text" size="5" maxlength="4" id="DRmin0" name="DRmin0" disabled="disabled"></td>
-                    <td><input type="text" size="5" maxlength="4" id="FLmin0" name="FLmin0" disabled="disabled"></td>
-                    <td><input type="text" size="5" maxlength="4" id="HRmin0" name="HRmin0" disabled="disabled"></td>
-                    <td><input type="text" size="5" maxlength="4" id="MAmin0" name="MAmin0" disabled="disabled"></td>
-                    <td><input type="text" size="5" maxlength="4" id="PEmin0" name="PEmin0"></td>
-                    <td><input type="text" size="5" maxlength="4" id="OQmin0" name="OQmin0" disabled="disabled"></td>
-                    <td><input type="text" size="5" maxlength="4" id="SRmin0" name="SRmin0" disabled="disabled"></td>
-                    <td><input type="text" size="5" maxlength="4" id="UTmin0" name="UTmin0" disabled="disabled"></td>
-                  </tr>
-                  <tr>
-                    <td>Max</td>
-                    <td><input type="text" size="5" maxlength="4" id="ERmax0" name="ERmax0" disabled="disabled"></td>
-                    <td><input type="text" size="5" maxlength="4" id="CRmax0" name="CRmax0"></td>
-                    <td><input type="text" size="5" maxlength="4" id="CDmax0" name="CDmax0"></td>
-                    <td><input type="text" size="5" maxlength="4" id="DRmax0" name="DRmax0" disabled="disabled"></td>
-                    <td><input type="text" size="5" maxlength="4" id="FLmax0" name="FLmax0" disabled="disabled"></td>
-                    <td><input type="text" size="5" maxlength="4" id="HRmax0" name="HRmax0" disabled="disabled"></td>
-                    <td><input type="text" size="5" maxlength="4" id="MAmax0" name="MAmax0" disabled="disabled"></td>
-                    <td><input type="text" size="5" maxlength="4" id="PEmax0" name="PEmax0"></td>
-                    <td><input type="text" size="5" maxlength="4" id="OQmax0" name="OQmax0" disabled="disabled"></td>
-                    <td><input type="text" size="5" maxlength="4" id="SRmax0" name="SRmax0" disabled="disabled"></td>
-                    <td><input type="text" size="5" maxlength="4" id="UTmax0" name="UTmax0" disabled="disabled"></td>
-                  </tr>
-                </tbody>
-              </table>
+              {{ resourceTypeOverridesHTML }}
             </td>
           </tr>
           <tr><td><div title="List any Galaxy Harvester users that should be able to come to this screen and edit this galaxy's details.">Galaxy Admins:</div></td><td colspan="2"></td></tr>
