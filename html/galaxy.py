@@ -112,11 +112,11 @@ def getResourceTypeOverrides(conn, galaxy):
 			rto.ERmax
 		FROM tResourceTypeOverrides rto
 		INNER JOIN tResourceType rt1 ON rt1.resourceType = rto.resourceType
-		WHERE galaxyID = {galaxyID};
-	""".format(galaxyID=galaxy)
+		WHERE galaxyID = %(galaxyID)s;
+	""".format()
 
 	cursor = conn.cursor(pymysql.cursors.DictCursor)
-	cursor.execute(overridesSql)
+	cursor.execute(overridesSql, {'galaxyID': galaxy})
 	row = cursor.fetchone()
 
 	while row != None:

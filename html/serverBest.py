@@ -56,8 +56,8 @@ def getPosition(conn, spawnID, galaxy, statWeights, resourceGroup, serverBestMod
     sqlStr1 = """
         SELECT
             spawnID,
-            ({0}) / ({1}) AS overallScore,
-            {2}
+            ({obyStr}) / ({obyStr2}) AS overallScore,
+            {maxCheckStr}
         FROM
             tResources
             INNER JOIN tResourceType rt1 ON tResources.resourceType = rt1.resourceType
@@ -65,19 +65,19 @@ def getPosition(conn, spawnID, galaxy, statWeights, resourceGroup, serverBestMod
             INNER JOIN (
                     SELECT resourceType
                     FROM tResourceTypeGroup
-                    WHERE resourceGroup="{3}" OR resourceType="{3}"
+                    WHERE resourceGroup=%(resourceGroup)s OR resourceType=%(resourceGroup)s
                     GROUP BY resourceType
                 ) rtg ON tResources.resourceType = rtg.resourceType
-        WHERE galaxy={4}
-        ORDER BY ({0}) / ({1})
+        WHERE galaxy=%(galaxy)s
+        ORDER BY ({obyStr}) / ({obyStr2})
         DESC LIMIT 8;
-    """.format(obyStr, obyStr2, maxCheckStr, resourceGroup, str(galaxy))
+    """.format(obyStr=obyStr, obyStr2=obyStr2, maxCheckStr=maxCheckStr)
 
     cursor = conn.cursor()
 
     spawnPos = 0
     if (cursor):
-        cursor.execute(sqlStr1)
+        cursor.execute(sqlStr1, {'resourceGroup': resourceGroup, 'galaxy': galaxy})
         row = cursor.fetchone()
         # Check is spawn in top 8 and within 5% quality of 1st
         rowPos = 1

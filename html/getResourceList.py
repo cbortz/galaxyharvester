@@ -145,38 +145,42 @@ else:
 	galaxyState = dbShared.galaxyState(galaxy)
 
 if (resGroup != "any" and resGroup != ""):
-	joinStr = joinStr + " INNER JOIN (SELECT resourceType FROM tResourceTypeGroup WHERE resourceGroup='" + resGroup + "' GROUP BY resourceType) rtgg ON rt1.resourceType = rtgg.resourceType"
+	joinStr += " INNER JOIN (SELECT resourceType FROM tResourceTypeGroup WHERE resourceGroup=%(resGroup)s GROUP BY resourceType) rtgg ON rt1.resourceType = rtgg.resourceType"
+
 if (resCategory != "any" and resCategory != ""):
-	joinStr = joinStr + " INNER JOIN (SELECT resourceType FROM tResourceTypeGroup WHERE resourceGroup='" + resCategory + "' GROUP BY resourceType) rtgc ON rt1.resourceType = rtgc.resourceType"
+	joinStr += " INNER JOIN (SELECT resourceType FROM tResourceTypeGroup WHERE resourceGroup=%(resCategory)s GROUP BY resourceType) rtgc ON rt1.resourceType = rtgc.resourceType"
 
 if (unavailableDays != None and unavailableDays.isdigit()):
 	if (unavailableDays == "0"):
-		criteriaStr = "tResources.galaxy=" + galaxy + " AND unavailable IS NULL"
+		criteriaStr = "tResources.galaxy=%(galaxy)s AND unavailable IS NULL"
 	else:
 		if (resType != "any" and resType != "") or (resGroup != "any" and resGroup != ""):
-			criteriaStr = "tResources.galaxy=" + galaxy + " AND (unavailable IS NULL OR DATEDIFF(NOW(),unavailable) <= " + unavailableDays + ")"
+			criteriaStr = "tResources.galaxy=%(galaxy)s AND (unavailable IS NULL OR DATEDIFF(NOW(),unavailable) <= " + unavailableDays + ")"
 		else:
 			errorStr = "You must select a resource type or group when searching for unavailable resources."
 else:
-	criteriaStr = "tResources.galaxy=" + galaxy + " AND unavailable IS NULL"
+	criteriaStr = "tResources.galaxy=%(galaxy)s AND unavailable IS NULL"
 
 if (planet == "" and planetName != ""):
 	planet = dbShared.getPlanetID(planetName)
+
 if (planet != "any" and planet !="null" and planet != "" and planet != "0"):
 	unPlanetStr = ",'"+planet+"'"
-	criteriaStr = criteriaStr + " AND EXISTS (SELECT planetID FROM tResourcePlanet WHERE spawnID = tResources.spawnID AND planetID=" + planet + " AND unavailable IS NULL)"
+	criteriaStr = criteriaStr + " AND EXISTS (SELECT planetID FROM tResourcePlanet WHERE spawnID = tResources.spawnID AND planetID=%(planet)s AND unavailable IS NULL)"
 
 if (resType != "any" and resType != ""):
-	criteriaStr = criteriaStr + " AND tResources.resourceType='" + resType + "'"
+	criteriaStr = criteriaStr + " AND tResources.resourceType=%(resType)s"
 
 if logged_state == 1:
 	#for later when nonpublic waypoints in
 	#wpCriteria = 'shareLevel=256 OR owner="' + currentUser + '" OR (shareLevel=64 AND owner IN (SELECT f1.friendID FROM tUserFriends f1 INNER JOIN tUserFriends f2 ON f1.userID=f2.friendID WHERE f1.userID="' + currentUser + '")) OR waypointID IN (SELECT uw.waypointID FROM tUserWaypoints uw WHERE unlocked IS NOT NULL AND uw.userID="' + currentUser + '")'
 	wpCriteria = 'shareLevel=256'
+
 	if favorite == "on":
-		joinStr = joinStr + " INNER JOIN (SELECT itemID, favGroup, units FROM tFavorites WHERE userID='" + currentUser + "' AND favType=1) favs ON tResources.spawnID = favs.itemID"
+		joinStr += " INNER JOIN (SELECT itemID, favGroup, units FROM tFavorites WHERE userID=%(currentUser)s AND favType=1) favs ON tResources.spawnID = favs.itemID"
 	else:
-		joinStr = joinStr + ' LEFT JOIN (SELECT itemID, favGroup, units FROM tFavorites WHERE userID="' + currentUser + '" AND favType=1) favs ON tResources.spawnID = favs.itemID'
+		joinStr += ' LEFT JOIN (SELECT itemID, favGroup, units FROM tFavorites WHERE userID=%(currentUser)s AND favType=1) favs ON tResources.spawnID = favs.itemID'
+
 	favCols = ', favGroup, units'
 else:
 	wpCriteria = 'shareLevel=256'
@@ -258,20 +262,28 @@ if (errorStr == ""):
 			rt1.resourceCategory,
 			rg2.groupName AS categoryName,
 			rt1.resourceGroup,
-			(SELECT Max(concentration) FROM tWaypoint WHERE tWaypoint.spawnID=tResources.spawnID AND ({0})) AS wpMaxConc{1}
+			(SELECT Max(concentration) FROM tWaypoint WHERE tWaypoint.spawnID=tResources.spawnID AND ({wpCriteria})) AS wpMaxConc{favCols}
 		FROM
 			tResources
 			INNER JOIN tResourceType rt1 ON tResources.resourceType = rt1.resourceType
 			INNER JOIN tResourceGroup rg1 ON rt1.resourceGroup = rg1.resourceGroup
 			INNER JOIN tResourceGroup rg2 ON rt1.resourceCategory = rg2.resourceGroup
 			LEFT JOIN tResourceTypeOverrides rto ON rto.resourceType = tResources.resourceType AND rto.galaxyID = tResources.galaxy
-			{2}
-			WHERE {3}
-			{4};
-		""".format(wpCriteria, favCols, joinStr, criteriaStr, orderStr)
+			{joinStr}
+			WHERE {criteriaStr}
+			{orderStr};
+		""".format(wpCriteria=wpCriteria, favCols=favCols, joinStr=joinStr, criteriaStr=criteriaStr, orderStr=orderStr)
 
 		#sys.stderr.write(sqlStr)
-		cursor.execute(sqlStr)
+		cursor.execute(sqlStr, {
+			'currentUser': currentUser,
+			'galaxy': galaxy,
+			'planet': planet,
+			'resCategory': resCategory,
+			'resGroup': resGroup,
+			'resType': resType
+		})
+
 		row = cursor.fetchone()
 		while (row != None):
 			# group by resource group
