@@ -161,7 +161,7 @@ def main():
 				WHERE rt.resourceType = %(resourceType)s;
 			"""
 
-			cursor.execute(typeSql, {'galaxy': galaxy, 'resourceType': typeID})
+			cursor.execute(typeSql, {'galaxy': ghShared.tryInt(galaxy), 'resourceType': typeID})
 			row = cursor.fetchone()
 			if (row != None):
 				typeName = row[0]

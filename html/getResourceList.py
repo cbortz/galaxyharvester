@@ -166,7 +166,7 @@ if (planet == "" and planetName != ""):
 
 if (planet != "any" and planet !="null" and planet != "" and planet != "0"):
 	unPlanetStr = ",'"+planet+"'"
-	criteriaStr = criteriaStr + " AND EXISTS (SELECT planetID FROM tResourcePlanet WHERE spawnID = tResources.spawnID AND planetID=%(planet)s AND unavailable IS NULL)"
+	criteriaStr = criteriaStr + " AND EXISTS (SELECT planetID FROM tResourcePlanet WHERE spawnID = tResources.spawnID AND planetID=%(planetID)s AND unavailable IS NULL)"
 
 if (resType != "any" and resType != ""):
 	criteriaStr = criteriaStr + " AND tResources.resourceType=%(resType)s"
@@ -277,8 +277,8 @@ if (errorStr == ""):
 		#sys.stderr.write(sqlStr)
 		cursor.execute(sqlStr, {
 			'currentUser': currentUser,
-			'galaxy': galaxy,
-			'planet': planet,
+			'galaxy': ghShared.tryInt(galaxy),
+			'planetID': ghShared.tryInt(planet),
 			'resCategory': resCategory,
 			'resGroup': resGroup,
 			'resType': resType

@@ -68,7 +68,7 @@ def getResource(conn, logged_state, currentUser, spawnID, galaxy, spawnName):
 		favJoin = ''
 		favCols = ', NULL, NULL'
 	if spawnID != None:
-		criteriaStr = 'spawnID=%(spawnID)i'
+		criteriaStr = 'spawnID=%(spawnID)s'
 	else:
 		criteriaStr = 'galaxy=%(galaxy)s AND spawnName=%(spawnName)s'
 
@@ -104,7 +104,12 @@ def getResource(conn, logged_state, currentUser, spawnID, galaxy, spawnName):
 			WHERE {criteriaStr};
 		""".format(favCols=favCols, favJoin=favJoin, criteriaStr=criteriaStr)
 
-		cursor.execute(sqlStr, {'currentUser': currentUser, 'galaxy': galaxy, 'spawnID': spawnID, 'spawnName': spawnName})
+		cursor.execute(sqlStr, {
+			'currentUser': currentUser,
+			'galaxy': ghShared.tryInt(galaxy),
+			'spawnID': ghShared.tryInt(spawnID),
+			'spawnName': spawnName
+		})
 		row = cursor.fetchone()
 
 		# get resource box if the spawn was found

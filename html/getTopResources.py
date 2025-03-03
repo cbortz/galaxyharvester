@@ -27,6 +27,7 @@ import dbSession
 import dbShared
 import cgi
 import pymysql
+import ghShared
 import ghLists
 import ghObjects
 #
@@ -345,7 +346,7 @@ if galaxy != '':
 
 		cursor.execute(
 			sqlStr1.format(orderVals=orderVals, favCols=favCols, favJoin=favJoin),
-			{'currentUser': currentUser, 'galaxy': galaxy, 'resGroup': resGroup, 'resType': resType}
+			{'currentUser': currentUser, 'galaxy': ghShared.tryInt(galaxy), 'resGroup': resGroup, 'resType': resType}
 		)
 
 		row = cursor.fetchone()

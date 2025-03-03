@@ -116,7 +116,7 @@ def getResourceTypeOverrides(conn, galaxy):
 	""".format()
 
 	cursor = conn.cursor(pymysql.cursors.DictCursor)
-	cursor.execute(overridesSql, {'galaxyID': galaxy})
+	cursor.execute(overridesSql, {'galaxyID': ghShared.tryInt(galaxy)})
 	row = cursor.fetchone()
 
 	while row != None:
