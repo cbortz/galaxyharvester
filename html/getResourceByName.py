@@ -27,6 +27,7 @@ import dbSession
 import dbShared
 import cgi
 import pymysql
+import ghShared
 import ghLists
 from xml.dom import minidom
 import time
@@ -91,14 +92,47 @@ def getSpawnXML(spawnName, galaxy, currentUser, logged_state):
 		result = "Error: could not connect to database"
 
 	if logged_state == 1:
-		joinStr = ''.join((joinStr, ' LEFT JOIN (SELECT itemID, favGroup, despawnAlert FROM tFavorites WHERE userID="', currentUser, '" AND favType=1) favs ON tResources.spawnID = favs.itemID'))
+		joinStr += 'LEFT JOIN (SELECT itemID, favGroup, despawnAlert FROM tFavorites WHERE userID=%(currentUser)s AND favType=1) favs ON tResources.spawnID = favs.itemID'
 		favCols = ', favGroup, despawnAlert'
 	else:
 		favCols = ', NULL, NULL'
 
 	if (cursor):
-		spawnSQL = ''.join(('SELECT spawnID, tResources.resourceType, resourceTypeName, CR, CD, DR, FL, HR, MA, PE, OQ, SR, UT, ER, CRmin, CDmin, DRmin, FLmin, HRmin, MAmin, PEmin, OQmin, SRmin, UTmin, ERmin, CRmax, CDmax, DRmax, FLmax, HRmax, MAmax, PEmax, OQmax, SRmax, UTmax, ERmax, containerType, entered, enteredBy, unavailable, unavailableBy, verified, verifiedBy, (SELECT Max(concentration) FROM tWaypoint WHERE tWaypoint.spawnID=tResources.spawnID AND shareLevel=256) AS wpMaxConc', favCols, ' FROM tResources INNER JOIN tResourceType rt1 ON tResources.resourceType = rt1.resourceType', joinStr, ' WHERE galaxy=', galaxy, ' AND spawnName="', spawnName, '";'))
-		cursor.execute(spawnSQL)
+		spawnSQL = """
+			SELECT
+				spawnID, tResources.resourceType, resourceTypeName, CR, CD, DR, FL, HR, MA, PE, OQ, SR, UT, ER,
+				COALESCE(rto.CRmin, rt1.CRmin) AS CRmin,
+				COALESCE(rto.CDmin, rt1.CDmin) AS CDmin,
+				COALESCE(rto.DRmin, rt1.DRmin) AS DRmin,
+				COALESCE(rto.FLmin, rt1.FLmin) AS FLmin,
+				COALESCE(rto.HRmin, rt1.HRmin) AS HRmin,
+				COALESCE(rto.MAmin, rt1.MAmin) AS MAmin,
+				COALESCE(rto.PEmin, rt1.PEmin) AS PEmin,
+				COALESCE(rto.OQmin, rt1.OQmin) AS OQmin,
+				COALESCE(rto.SRmin, rt1.SRmin) AS SRmin,
+				COALESCE(rto.UTmin, rt1.UTmin) AS UTmin,
+				COALESCE(rto.ERmin, rt1.ERmin) AS ERmin,
+				COALESCE(rto.CRmax, rt1.CRmax) AS CRmax,
+				COALESCE(rto.CDmax, rt1.CDmax) AS CDmax,
+				COALESCE(rto.DRmax, rt1.DRmax) AS DRmax,
+				COALESCE(rto.FLmax, rt1.FLmax) AS FLmax,
+				COALESCE(rto.HRmax, rt1.HRmax) AS HRmax,
+				COALESCE(rto.MAmax, rt1.MAmax) AS MAmax,
+				COALESCE(rto.PEmax, rt1.PEmax) AS PEmax,
+				COALESCE(rto.OQmax, rt1.OQmax) AS OQmax,
+				COALESCE(rto.SRmax, rt1.SRmax) AS SRmax,
+				COALESCE(rto.UTmax, rt1.UTmax) AS UTmax,
+				COALESCE(rto.ERmax, rt1.ERmax) AS ERmax,
+				containerType, entered, enteredBy, unavailable, unavailableBy, verified, verifiedBy,
+				(SELECT Max(concentration) FROM tWaypoint WHERE tWaypoint.spawnID=tResources.spawnID AND shareLevel=256) AS wpMaxConc{favCols}
+			FROM tResources
+				INNER JOIN tResourceType rt1 ON tResources.resourceType = rt1.resourceType
+				LEFT JOIN tResourceTypeOverrides rto ON tResources.resourceType = rto.resourceType AND tResources.galaxy = rto.galaxyID
+				{joinStr}
+			WHERE galaxy= %(galaxy)s AND spawnName = %(spawnName)s;
+		""".format(favCols=favCols, joinStr=joinStr)
+
+		cursor.execute(spawnSQL, {'galaxy': ghShared.tryInt(galaxy), 'spawnName': spawnName, 'currentUser': currentUser})
 		row = cursor.fetchone()
 
 		if (row != None):

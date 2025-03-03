@@ -3,6 +3,10 @@
 <html lang="en"><head><title>Galaxy Admin - Galaxy Harvester</title>
 {{ blocks.commonResources(uiTheme, enableCAPTCHA) }}
 <script type="text/javascript">
+template = `
+  {{ resourceTypeOverrideHTMLTemplate }}
+`;
+console.log(template);
 $(document).ready(function() {
     $("#galaxySel").val(getCookie("galaxy",defaultGalaxy));
     $("#galaxyStatus").val("{{ galaxyState }}");
@@ -95,7 +99,17 @@ function saveGalaxy() {
   });
 
   // send data
-  $.post(BASE_SCRIPT_URL + 'postGalaxy.py', { galaxyID: '{{ galaxyID }}', galaxyName: $('#galaxyName').val(), galaxyState: $('#galaxyStatus').val(), galaxyNGE: $('#oGalaxyNGE').attr('checked'), galaxyWebsite: $('#galaxyWebsite').val(), galaxyPlanets: planets, galaxyResourceTypes: resourceTypes, galaxyAdmins: admins },
+  $.post(BASE_SCRIPT_URL + 'postGalaxy.py', {
+      galaxyID: '{{ galaxyID }}',
+      galaxyName: $('#galaxyName').val(),
+      galaxyState: $('#galaxyStatus').val(),
+      galaxyNGE: $('#oGalaxyNGE').attr('checked'),
+      galaxyWebsite: $('#galaxyWebsite').val(),
+      galaxyPlanets: planets,
+      galaxyResourceTypes: resourceTypes,
+      galaxyAdmins: admins,
+      galaxyResourceTypeOverrides: ["CRmax=1&CRmin=300", "OQmin=3&OQmax=500"]
+    },
     function(data) {
       var result = $(data).find('resultText').eq(0).text();
       $('#busyImgSave').css('display','none');
@@ -150,6 +164,12 @@ function saveGalaxy() {
                   <td>Selected:<br/><select multiple size="12" id="resourceTypesSelected" style="min-width: 120px;">{{ galaxyResourceTypeList }}</select></td>
                 </tr>
               </table>
+            </td>
+          </tr>
+          <tr><td colspan=3><h3 title="If your server has additional custom resource min/max values, set them here.">Custom Resource Type Min/Max:</h3></td></tr>
+          <tr>
+            <td colspan="3">
+              {{ resourceTypeOverridesHTML }}
             </td>
           </tr>
           <tr><td><div title="List any Galaxy Harvester users that should be able to come to this screen and edit this galaxy's details.">Galaxy Admins:</div></td><td colspan="2"></td></tr>

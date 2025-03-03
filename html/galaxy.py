@@ -78,6 +78,141 @@ def getElectiveResourceTypeList(conn, galaxy, available):
 	cursor.close()
 	return listHTML
 
+def getResourceTypeOverridesHTML(conn, galaxy):
+	listHTML = ''
+	overrides = getResourceTypeOverrides(conn, galaxy)
+
+	for idx, override in enumerate(overrides):
+		listHTML += resourceTypeOverideHTML(override, idx)
+
+	return listHTML
+
+def getResourceTypeOverrides(conn, galaxy):
+	overrides = []
+
+	if not galaxy.isdigit():
+		return overrides
+
+	overridesSql = """
+		SELECT
+			rto.resourceType,
+			rt1.resourceTypeName,
+			rto.CRmin,
+			rto.CRmax,
+			rto.CDmin,
+			rto.CDmax,
+			rto.DRmin,
+			rto.DRmax,
+			rto.FLmin,
+			rto.FLmax,
+			rto.HRmin,
+			rto.HRmax,
+			rto.MAmin,
+			rto.MAmax,
+			rto.PEmin,
+			rto.PEmax,
+			rto.OQmin,
+			rto.OQmax,
+			rto.SRmin,
+			rto.SRmax,
+			rto.UTmin,
+			rto.UTmax,
+			rto.ERmin,
+			rto.ERmax
+		FROM tResourceTypeOverrides rto
+		INNER JOIN tResourceType rt1 ON rt1.resourceType = rto.resourceType
+		WHERE galaxyID = %(galaxyID)s;
+	""".format()
+
+	cursor = conn.cursor(pymysql.cursors.DictCursor)
+	cursor.execute(overridesSql, {'galaxyID': ghShared.tryInt(galaxy)})
+	row = cursor.fetchone()
+
+	while row != None:
+		overrides.append(row)
+		row = cursor.fetchone()
+
+	# sys.stderr.write(str(overrides))
+
+	return overrides
+
+def resourceTypeOverideHTML(override={}, idx='#'):
+	return """
+    <table id="">
+      <thead>
+        <tr>
+          <td></td>
+          <td>ER</td>
+          <td>CR</td>
+          <td>CD</td>
+          <td>DR</td>
+          <td>FL</td>
+          <td>HR</td>
+          <td>MA</td>
+          <td>PE</td>
+          <td>OQ</td>
+          <td>SR</td>
+          <td>UT</td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Min</td>
+          <td><input type="text" size="5" maxlength="4" value="{ERmin}" id="ERmin{idx}" name="ERmin{idx}" disabled="disabled"></td>
+          <td><input type="text" size="5" maxlength="4" value="{CRmin}" id="CRmin{idx}" name="CRmin{idx}"></td>
+          <td><input type="text" size="5" maxlength="4" value="{CDmin}" id="CDmin{idx}" name="CDmin{idx}"></td>
+          <td><input type="text" size="5" maxlength="4" value="{DRmin}" id="DRmin{idx}" name="DRmin{idx}" disabled="disabled"></td>
+          <td><input type="text" size="5" maxlength="4" value="{FLmin}" id="FLmin{idx}" name="FLmin{idx}" disabled="disabled"></td>
+          <td><input type="text" size="5" maxlength="4" value="{HRmin}" id="HRmin{idx}" name="HRmin{idx}" disabled="disabled"></td>
+          <td><input type="text" size="5" maxlength="4" value="{MAmin}" id="MAmin{idx}" name="MAmin{idx}" disabled="disabled"></td>
+          <td><input type="text" size="5" maxlength="4" value="{PEmin}" id="PEmin{idx}" name="PEmin{idx}"></td>
+          <td><input type="text" size="5" maxlength="4" value="{OQmin}" id="OQmin{idx}" name="OQmin{idx}" disabled="disabled"></td>
+          <td><input type="text" size="5" maxlength="4" value="{SRmin}" id="SRmin{idx}" name="SRmin{idx}" disabled="disabled"></td>
+          <td><input type="text" size="5" maxlength="4" value="{UTmin}" id="UTmin{idx}" name="UTmin{idx}" disabled="disabled"></td>
+        </tr>
+        <tr>
+          <td>Max</td>
+          <td><input type="text" size="5" maxlength="4" value="{ERmax}" id="ERmax{idx}" name="ERmax{idx}" disabled="disabled"></td>
+          <td><input type="text" size="5" maxlength="4" value="{CRmax}" id="CRmax{idx}" name="CRmax{idx}"></td>
+          <td><input type="text" size="5" maxlength="4" value="{CDmax}" id="CDmax{idx}" name="CDmax{idx}"></td>
+          <td><input type="text" size="5" maxlength="4" value="{DRmax}" id="DRmax{idx}" name="DRmax{idx}" disabled="disabled"></td>
+          <td><input type="text" size="5" maxlength="4" value="{FLmax}" id="FLmax{idx}" name="FLmax{idx}" disabled="disabled"></td>
+          <td><input type="text" size="5" maxlength="4" value="{HRmax}" id="HRmax{idx}" name="HRmax{idx}" disabled="disabled"></td>
+          <td><input type="text" size="5" maxlength="4" value="{MAmax}" id="MAmax{idx}" name="MAmax{idx}" disabled="disabled"></td>
+          <td><input type="text" size="5" maxlength="4" value="{PEmax}" id="PEmax{idx}" name="PEmax{idx}"></td>
+          <td><input type="text" size="5" maxlength="4" value="{OQmax}" id="OQmax{idx}" name="OQmax{idx}" disabled="disabled"></td>
+          <td><input type="text" size="5" maxlength="4" value="{SRmax}" id="SRmax{idx}" name="SRmax{idx}" disabled="disabled"></td>
+          <td><input type="text" size="5" maxlength="4" value="{UTmax}" id="UTmax{idx}" name="UTmax{idx}" disabled="disabled"></td>
+        </tr>
+      </tbody>
+    </table>
+	""".format(
+		idx=idx,
+		CDmax=override.get('CDmax') or '',
+		CDmin=override.get('CDmin') or '',
+		CRmax=override.get('CRmax') or '',
+		CRmin=override.get('CRmin') or '',
+		DRmax=override.get('DRmax') or '',
+		DRmin=override.get('DRmin') or '',
+		ERmax=override.get('ERmax') or '',
+		ERmin=override.get('ERmin') or '',
+		FLmax=override.get('FLmax') or '',
+		FLmin=override.get('FLmin') or '',
+		HRmax=override.get('HRmax') or '',
+		HRmin=override.get('HRmin') or '',
+		MAmax=override.get('MAmax') or '',
+		MAmin=override.get('MAmin') or '',
+		OQmax=override.get('OQmax') or '',
+		OQmin=override.get('OQmin') or '',
+		PEmax=override.get('PEmax') or '',
+		PEmin=override.get('PEmin') or '',
+		SRmax=override.get('SRmax') or '',
+		SRmin=override.get('SRmin') or '',
+		UTmax=override.get('UTmax') or '',
+		UTmin=override.get('UTmin') or ''
+	)
+
+
 def main():
 	useCookies = 1
 	linkappend = ''
@@ -95,6 +230,7 @@ def main():
 	availablePlanetList = []
 	galaxyResourceTypeList = []
 	availableResourceTypeList = []
+	resourceTypeOverrides = []
 	galaxyAdmins = []
 	# Get current url
 	try:
@@ -161,8 +297,6 @@ def main():
 		galaxy = dbShared.dbInsertSafe(path[0])
 		conn = dbShared.ghConn()
 		galaxyAdminList = dbShared.getGalaxyAdminList(conn, currentUser)
-		availablePlanetList = getPlanetList(conn, galaxy, 1)
-		availableResourceTypeList = getElectiveResourceTypeList(conn, galaxy, 1)
 		if galaxy.isdigit():
 			# get the galaxy details for edit
 			galaxyCursor = conn.cursor()
@@ -176,7 +310,11 @@ def main():
 				galaxyWebsite = galaxyRow[3]
 			galaxyCursor.close()
 			galaxyPlanetList = getPlanetList(conn, galaxy, 0)
+			availablePlanetList = getPlanetList(conn, galaxy, 1)
+			availableResourceTypeList = getElectiveResourceTypeList(conn, galaxy, 1)
 			galaxyResourceTypeList = getElectiveResourceTypeList(conn, galaxy, 0)
+			resourceTypeOverridesHTML = getResourceTypeOverridesHTML(conn, galaxy)
+			resourceTypeOverrideHTMLTemplate = resourceTypeOverideHTML()
 			galaxyAdmins = dbShared.getGalaxyAdmins(conn, galaxy)
 			conn.close()
 		else:
@@ -191,7 +329,7 @@ def main():
 	env.globals['BASE_SCRIPT_URL'] = ghShared.BASE_SCRIPT_URL
 	env.globals['MOBILE_PLATFORM'] = ghShared.getMobilePlatform(os.environ['HTTP_USER_AGENT'])
 	template = env.get_template('galaxy.html')
-	print(template.render(uiTheme=uiTheme, loggedin=logged_state, currentUser=currentUser, pictureName=pictureName, loginResult=loginResult, linkappend=linkappend, url=url, imgNum=ghShared.imgNum, galaxyID=galaxy, galaxyList=ghLists.getGalaxyList(), msgHTML=msgHTML, galaxyName=galaxyName, galaxyState=galaxyState, galaxyCheckedNGE=galaxyCheckedNGE, galaxyWebsite=galaxyWebsite, galaxyStatusList=ghLists.getGalaxyStatusList(), galaxyPlanetList=galaxyPlanetList, availablePlanetList=availablePlanetList, galaxyResourceTypeList=galaxyResourceTypeList, availableResourceTypeList=availableResourceTypeList, galaxyAdminList=galaxyAdminList, galaxyAdmins=galaxyAdmins, enableCAPTCHA=ghShared.RECAPTCHA_ENABLED, siteidCAPTCHA=ghShared.RECAPTCHA_SITEID))
+	print(template.render(uiTheme=uiTheme, loggedin=logged_state, currentUser=currentUser, pictureName=pictureName, loginResult=loginResult, linkappend=linkappend, url=url, imgNum=ghShared.imgNum, galaxyID=galaxy, galaxyList=ghLists.getGalaxyList(), msgHTML=msgHTML, galaxyName=galaxyName, galaxyState=galaxyState, galaxyCheckedNGE=galaxyCheckedNGE, galaxyWebsite=galaxyWebsite, galaxyStatusList=ghLists.getGalaxyStatusList(), galaxyPlanetList=galaxyPlanetList, availablePlanetList=availablePlanetList, galaxyResourceTypeList=galaxyResourceTypeList, availableResourceTypeList=availableResourceTypeList, resourceTypeOverridesHTML=resourceTypeOverridesHTML, resourceTypeOverrideHTMLTemplate=resourceTypeOverrideHTMLTemplate, galaxyAdminList=galaxyAdminList, galaxyAdmins=galaxyAdmins, enableCAPTCHA=ghShared.RECAPTCHA_ENABLED, siteidCAPTCHA=ghShared.RECAPTCHA_SITEID))
 
 
 if __name__ == "__main__":
