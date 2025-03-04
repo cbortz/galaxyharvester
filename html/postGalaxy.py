@@ -31,7 +31,7 @@ import pymysql
 import smtplib
 from email.message import EmailMessage
 from xml.dom import minidom
-from urllib.parse import parse_qs
+from urllib.parse import parse_qsl
 import ghNames
 import ghShared
 sys.path.append("../")
@@ -87,31 +87,31 @@ sys.stderr.write("\n")
 galaxyAdmins = form.getfirst("galaxyAdmins", "")
 
 for override_str in galaxyResourceTypeOverrides:
-	override = parse_qs(override_str)
+	override = dict(parse_qsl(override_str))
 
 	override = {
-		'CDmax': next(iter(override.get('CDmax', [])), ''),
-		'CDmin': next(iter(override.get('CDmin', [])), ''),
-		'CRmax': next(iter(override.get('CRmax', [])), ''),
-		'CRmin': next(iter(override.get('CRmin', [])), ''),
-		'DRmax': next(iter(override.get('DRmax', [])), ''),
-		'DRmin': next(iter(override.get('DRmin', [])), ''),
-		'ERmax': next(iter(override.get('ERmax', [])), ''),
-		'ERmin': next(iter(override.get('ERmin', [])), ''),
-		'FLmax': next(iter(override.get('FLmax', [])), ''),
-		'FLmin': next(iter(override.get('FLmin', [])), ''),
-		'HRmax': next(iter(override.get('HRmax', [])), ''),
-		'HRmin': next(iter(override.get('HRmin', [])), ''),
-		'MAmax': next(iter(override.get('MAmax', [])), ''),
-		'MAmin': next(iter(override.get('MAmin', [])), ''),
-		'OQmax': next(iter(override.get('OQmax', [])), ''),
-		'OQmin': next(iter(override.get('OQmin', [])), ''),
-		'PEmax': next(iter(override.get('PEmax', [])), ''),
-		'PEmin': next(iter(override.get('PEmin', [])), ''),
-		'SRmax': next(iter(override.get('SRmax', [])), ''),
-		'SRmin': next(iter(override.get('SRmin', [])), ''),
-		'UTmax': next(iter(override.get('UTmax', [])), ''),
-		'UTmin': next(iter(override.get('UTmin', [])), '')
+		'CDmax': override.get('CDmax'),
+		'CDmin': override.get('CDmin'),
+		'CRmax': override.get('CRmax'),
+		'CRmin': override.get('CRmin'),
+		'DRmax': override.get('DRmax'),
+		'DRmin': override.get('DRmin'),
+		'ERmax': override.get('ERmax'),
+		'ERmin': override.get('ERmin'),
+		'FLmax': override.get('FLmax'),
+		'FLmin': override.get('FLmin'),
+		'HRmax': override.get('HRmax'),
+		'HRmin': override.get('HRmin'),
+		'MAmax': override.get('MAmax'),
+		'MAmin': override.get('MAmin'),
+		'OQmax': override.get('OQmax'),
+		'OQmin': override.get('OQmin'),
+		'PEmax': override.get('PEmax'),
+		'PEmin': override.get('PEmin'),
+		'SRmax': override.get('SRmax'),
+		'SRmin': override.get('SRmin'),
+		'UTmax': override.get('UTmax'),
+		'UTmin': override.get('UTmin'),
 	}
 
 	sys.stderr.write(str(override))
