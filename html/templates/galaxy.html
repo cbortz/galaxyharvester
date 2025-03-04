@@ -3,10 +3,6 @@
 <html lang="en"><head><title>Galaxy Admin - Galaxy Harvester</title>
 {{ blocks.commonResources(uiTheme, enableCAPTCHA) }}
 <script type="text/javascript">
-template = `
-  {{ resourceTypeOverrideHTMLTemplate }}
-`;
-console.log(template);
 $(document).ready(function() {
     $("#galaxySel").val(getCookie("galaxy",defaultGalaxy));
     $("#galaxyStatus").val("{{ galaxyState }}");
@@ -23,6 +19,19 @@ $(document).ready(function() {
         maxHeight:200,
         width:200,
         onSelect: function(value,data) {addAdmin(value);$('#adminUserAdd').val('')}
+    });
+
+    $.ajax({
+      url: `${BASE_SCRIPT_URL}getResourceTypeOverrides.py`,
+      method: 'GET',
+      dataType: "json",
+      success: function(data) {
+        console.log(data.overrides);
+      },
+      error: function(data) {
+        error = JSON.parse(data.responseText);
+        console.log(error.message);
+      }
     });
 
 });
