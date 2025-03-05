@@ -24,9 +24,12 @@ $(document).ready(function() {
     $.ajax({
       url: `${BASE_SCRIPT_URL}getResourceTypeOverrides.py`,
       method: 'GET',
+      data: {galaxy: $("#galaxySel").val()},
       dataType: "json",
       success: function(data) {
-        console.log(data.overrides);
+        for (const override of data.overrides) {
+          addTypeOverrideRow(override);
+        }
       },
       error: function(data) {
         error = JSON.parse(data.responseText);
@@ -85,6 +88,51 @@ function removeResourceTypes() {
     );
   });
 }
+
+type_override_num = 0;
+
+// add resource type override table
+function addTypeOverrideRow(override = {}) {
+  const statTypes = ["ER", "CR", "CD", "DR", "FL", "HR", "MA", "PE", "OQ", "SR", "UT"]
+  var $headRow = $("<tr/>").append($("<td/>"));
+
+  for (const stat of statTypes) $headRow.append($("<td/>").text(stat));
+
+  var $table = $("<table>", {"class": "rto-table"}).append($("<thead/>").append($headRow));
+  var $bodyRowMin = $("<tr/>").append($("<td/>").text("Min"))
+  var $bodyRowMax = $("<tr/>").append($("<td/>").text("Min"))
+
+  for (const stat of statTypes) {
+    $bodyRowMin.append(buildTypeOverrideInputCell(stat, type_override_num, override[`${stat}min`]));
+    $bodyRowMax.append(buildTypeOverrideInputCell(stat, type_override_num, override[`${stat}max`]));
+  };
+
+  $table.append($("<tbody/>").append($bodyRowMin).append($bodyRowMax));
+  $("#resourceTypeOverridesContainer").append($table);
+
+  type_override_num += 1;
+}
+
+function buildTypeOverrideInputCell(name, idx, value) {
+  return $("<td/>").append(
+    $("<input>", {
+      "id": `${name}${idx}`,
+      "value": value || null,
+      "name": name,
+      "size": 5,
+      "maxlength": 4
+    })
+  );
+}
+
+function setRTlist(rownum) {
+  // if ($("#oType" + rownum).attr("checked") == "checked") {
+  //   $("#typeGroupSel"+rownum).load("getResourceTypeList.py", {galaxy:$("#galaxySel").val()}, function() {$(this).val($(this).attr("tag"));maskStats(this);});
+  // } else {
+  //   $("#typeGroupSel"+rownum).load("getResourceGroupList.py", function() {$(this).val($(this).attr("tag"));maskStats(this);});
+  // }
+}
+
 // Send galaxy details
 function saveGalaxy() {
   $('#busyImgSave').css('display','block');
@@ -178,10 +226,11 @@ function saveGalaxy() {
           <tr><td colspan=3><h3 title="If your server has additional custom resource min/max values, set them here.">Custom Resource Type Min/Max:</h3></td></tr>
           <tr>
             <td colspan="3">
-              {{ resourceTypeOverridesHTML }}
+              <div id="resourceTypeOverridesContainer"></div>
+              <img src="/images/plusGreen32.png" alt="plus sign" title="Add another resource type override row" onclick="setRTlist(addTypeOverrideRow());" style="cursor:pointer;margin-right:120px; width: 15px; padding: 5px"/>
             </td>
           </tr>
-          <tr><td><div title="List any Galaxy Harvester users that should be able to come to this screen and edit this galaxy's details.">Galaxy Admins:</div></td><td colspan="2"></td></tr>
+          <tr><td colspan="3"><h3 title="List any Galaxy Harvester users that should be able to come to this screen and edit this galaxy's details.">Galaxy Admins:</h3></td></tr>
           <tr><td colspan="3"><div id="adminUsers" class="inlineItemBlockList"><input id="adminUserAdd" type="text" size="12" />
 {% for admin in galaxyAdmins %}
             <div class="blockUserItem">{{ admin }}<img src='/images/xRed16.png' alt='Remove' title='Remove' onclick='this.parentNode.remove();'></img></div>
