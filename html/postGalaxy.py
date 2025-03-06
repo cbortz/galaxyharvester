@@ -79,17 +79,18 @@ galaxyNGE = form.getfirst("galaxyNGE", "0")
 galaxyWebsite = form.getfirst("galaxyWebsite", "")
 galaxyPlanets = form.getfirst("galaxyPlanets", "")
 galaxyResourceTypes = form.getfirst("galaxyResourceTypes", "")
-galaxyResourceTypeOverrides = form.getlist("galaxyResourceTypeOverrides[]")
+galaxyResourceTypeOverridesStrList = form.getlist("galaxyResourceTypeOverrides[]")
 sys.stderr.write(str(form.keys))
 sys.stderr.write("\n")
-sys.stderr.write(str(galaxyResourceTypeOverrides))
+sys.stderr.write(str(galaxyResourceTypeOverridesStrList))
 sys.stderr.write("\n")
 galaxyAdmins = form.getfirst("galaxyAdmins", "")
 
-for override_str in galaxyResourceTypeOverrides:
+galaxyResourceTypeOverrides = []
+for override_str in galaxyResourceTypeOverridesStrList:
 	override = dict(parse_qsl(override_str))
-
 	override = {
+		'resourceType': override.get('resourceType'),
 		'CDmax': override.get('CDmax'),
 		'CDmin': override.get('CDmin'),
 		'CRmax': override.get('CRmax'),
@@ -115,8 +116,9 @@ for override_str in galaxyResourceTypeOverrides:
 	}
 
 	sys.stderr.write(str(override))
-
 	sys.stderr.write("\n")
+
+	galaxyResourceTypeOverrides.append(override)
 
 # escape input to prevent sql injection
 sid = dbShared.dbInsertSafe(sid)
@@ -200,7 +202,7 @@ def addGalaxy(galaxyName, galaxyNGE, galaxyWebsite, galaxyPlanets, galaxyResourc
 	conn.close()
 	return returnStr
 
-def updateGalaxy(galaxyID, galaxyName, galaxyState, galaxyNGE, galaxyWebsite, galaxyPlanets, galaxyResourceTypes, galaxyAdmins):
+def updateGalaxy(galaxyID, galaxyName, galaxyState, galaxyNGE, galaxyWebsite, galaxyPlanets, galaxyResourceTypes, galaxyResourceTypeOverrides, galaxyAdmins):
 	# Update galaxy information
 	returnStr = ""
 	result = 0
@@ -223,11 +225,27 @@ def updateGalaxy(galaxyID, galaxyName, galaxyState, galaxyNGE, galaxyWebsite, ga
 			cursor.execute('INSERT INTO tGalaxyResourceType (galaxyID, resourceType) VALUES (%s, %s)', [galaxyID, resourceType])
 			result = result + cursor.rowcount
 
+	cursor.execute("DELETE FROM tResourceTypeOverrides WHERE galaxyID=%s;", [galaxyID])
+	for resourceTypeOverride in galaxyResourceTypeOverrides:
+		if isinstance(resourceTypeOverride, dict):
+			cursor.execute(
+				"""
+					INSERT INTO tResourceTypeOverrides (
+						galaxyID, resourceType, CDmax, CDmin, CRmax, CRmin, DRmax, DRmin, ERmax, ERmin, FLmax, FLmin, HRmax, HRmin, MAmax, MAmin, OQmax, OQmin, PEmax, PEmin, SRmax, SRmin, UTmax, UTmin
+					) VALUES (
+						%(galaxyID)s, %(resourceType)s, %(CDmax)s, %(CDmin)s, %(CRmax)s, %(CRmin)s, %(DRmax)s, %(DRmin)s, %(ERmax)s, %(ERmin)s, %(FLmax)s, %(FLmin)s, %(HRmax)s, %(HRmin)s, %(MAmax)s, %(MAmin)s, %(OQmax)s, %(OQmin)s, %(PEmax)s, %(PEmin)s, %(SRmax)s, %(SRmin)s, %(UTmax)s, %(UTmin)s
+					)
+				""",
+				{**resourceTypeOverride, **{'galaxyID': ghShared.tryInt(galaxyID)}}
+			)
+			result = result + cursor.rowcount
+
 	cursor.execute("DELETE FROM tGalaxyUser WHERE galaxyID=%s AND roleType='a';", [galaxyID])
 	for user in galaxyAdmins:
 		if len(user) > 0:
 			cursor.execute("INSERT INTO tGalaxyUser (galaxyID, userID, roleType) VALUES (%s, %s, %s);", [galaxyID, user, "a"])
 			result = result + cursor.rowcount
+
 	if (result < 1):
 		returnStr = "Error: galaxy data not updated."
 	else:
@@ -279,7 +297,7 @@ if (errstr == ""):
 					# Get user galaxy admin status
 					adminList = dbShared.getGalaxyAdminList(conn, currentUser)
 					if '<option value="{0}">'.format(galaxy) in adminList:
-						result = updateGalaxy(galaxy, galaxyName, galaxyState, galaxyNGE, galaxyWebsite, galaxyPlanets, galaxyResourceTypes, galaxyAdmins)
+						result = updateGalaxy(galaxy, galaxyName, galaxyState, galaxyNGE, galaxyWebsite, galaxyPlanets, galaxyResourceTypes, galaxyResourceTypeOverrides, galaxyAdmins)
 					else:
 						result = "Error: You are not listed as an administrator of that galaxy.\n"
 			else:

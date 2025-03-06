@@ -24,7 +24,7 @@ $(document).ready(function() {
     $.ajax({
       url: `${BASE_SCRIPT_URL}getResourceTypeOverrides.py`,
       method: 'GET',
-      data: {galaxy: $("#galaxySel").val()},
+      data: {galaxy: currentGalaxyId()},
       dataType: "json",
       success: function(data) {
         for (const override of data.overrides) {
@@ -94,43 +94,117 @@ type_override_num = 0;
 // add resource type override table
 function addTypeOverrideRow(override = {}) {
   const statTypes = ["ER", "CR", "CD", "DR", "FL", "HR", "MA", "PE", "OQ", "SR", "UT"]
+
+  // table header content
   var $headRow = $("<tr/>").append($("<td/>"));
-
-  for (const stat of statTypes) $headRow.append($("<td/>").text(stat));
-
-  var $table = $("<table>", {"class": "rto-table"}).append($("<thead/>").append($headRow));
-  var $bodyRowMin = $("<tr/>").append($("<td/>").text("Min"))
-  var $bodyRowMax = $("<tr/>").append($("<td/>").text("Min"))
-
   for (const stat of statTypes) {
-    $bodyRowMin.append(buildTypeOverrideInputCell(stat, type_override_num, override[`${stat}min`]));
-    $bodyRowMax.append(buildTypeOverrideInputCell(stat, type_override_num, override[`${stat}max`]));
+    $headRow.append($("<td/>").text(stat));
   };
 
-  $table.append($("<tbody/>").append($bodyRowMin).append($bodyRowMax));
-  $("#resourceTypeOverridesContainer").append($table);
+  var tab = 0;
+
+  var $select = $("<select/>", {
+    id: typeSelectId(type_override_num),
+    name: typeSelectName(),
+    style: "width:200px",
+    tag: override["resourceType"],
+    onchange: "maskStats(this)",
+    tabindex: (100 * type_override_num) + (tab += 1)
+  });
+
+  // table body content
+  var $bodyRowMin = $("<tr/>").append($("<td/>", {style: 'font-family: monospace'}).text("Min"))
+  var $bodyRowMax = $("<tr/>").append($("<td/>", {style: 'font-family: monospace'}).text("Max"))
+  for (const stat of statTypes) {
+    $bodyRowMin.append(buildTypeOverrideInputCell(`${stat}min`, override[`${stat}min`], type_override_num, tab += 1));
+    $bodyRowMax.append(buildTypeOverrideInputCell(`${stat}max`, override[`${stat}max`], type_override_num, tab += 1));
+  };
+
+  $("#resourceTypeOverridesContainer").append(
+    $("<div/>", {class: "rto-container ghWidgetBox"})
+      .append($select)
+      .append(
+        $("<table>", {class: "rto-table"})
+          .append($("<thead/>").append($headRow))
+          .append($("<tbody/>").append($bodyRowMin).append($bodyRowMax))
+      )
+  );
+
+  loadTypes(type_override_num);
 
   type_override_num += 1;
 }
 
-function buildTypeOverrideInputCell(name, idx, value) {
+function typeSelectId(idx) {
+  return `${typeSelectName()}${idx}`;
+}
+
+function typeSelectName() {
+  return "resourceType";
+}
+
+function loadTypes(idx) {
+  $(`#${typeSelectId(idx)}`).load(
+    "/getResourceTypeList.py",
+    {galaxy: currentGalaxyId()},
+    function(data) {
+      if ( $(this).attr('tag') != '') {
+        $(this).val($(this).attr('tag'));
+        maskStats(this);
+      }
+    }
+  );
+}
+
+function currentGalaxyId() {
+  return $("#galaxySel").val();
+}
+
+function maskStats(typeSel) {
+  const thisRow = typeSel.id.substr(typeSelectName().length);
+  var statMask = "p11111111111";
+
+  if (typeSel.selectedIndex > -1) {
+    statMask = typeSel.options[typeSel.selectedIndex].title;
+  }
+
+  maybeMaskStat("CR", statMask, thisRow, 1, 1);
+  maybeMaskStat("CD", statMask, thisRow, 2, 1);
+  maybeMaskStat("DR", statMask, thisRow, 3, 1);
+  maybeMaskStat("FL", statMask, thisRow, 4, 1);
+  maybeMaskStat("HR", statMask, thisRow, 5, 1);
+  maybeMaskStat("MA", statMask, thisRow, 6, 1);
+  maybeMaskStat("PE", statMask, thisRow, 7, 1);
+  maybeMaskStat("OQ", statMask, thisRow, 8, 1);
+  maybeMaskStat("SR", statMask, thisRow, 9, 1);
+  maybeMaskStat("UT", statMask, thisRow, 10, 1);
+  maybeMaskStat("ER", statMask, thisRow, 11, 1);
+}
+
+function maybeMaskStat(stat, statMask, idx, rangeStart, rangeEnd) {
+  if (statMask.substr(rangeStart, rangeEnd) == "0") {
+    $(`#${stat}min${idx}`).attr("disabled", true);
+    $(`#${stat}max${idx}`).attr("disabled", true);
+  } else {
+    $(`#${stat}min${idx}`).removeAttr("disabled");
+    $(`#${stat}max${idx}`).removeAttr("disabled");
+  }
+}
+
+function buildTypeOverrideInputCell(name, value, idx, tab) {
   return $("<td/>").append(
     $("<input>", {
-      "id": `${name}${idx}`,
-      "value": value || null,
-      "name": name,
-      "size": 5,
-      "maxlength": 4
+      id: `${name}${idx}`,
+      value: value || null,
+      name: name,
+      disabled: true,
+      tabindex: (idx * 100) + tab
     })
   );
 }
 
-function setRTlist(rownum) {
-  // if ($("#oType" + rownum).attr("checked") == "checked") {
-  //   $("#typeGroupSel"+rownum).load("getResourceTypeList.py", {galaxy:$("#galaxySel").val()}, function() {$(this).val($(this).attr("tag"));maskStats(this);});
-  // } else {
-  //   $("#typeGroupSel"+rownum).load("getResourceGroupList.py", function() {$(this).val($(this).attr("tag"));maskStats(this);});
-  // }
+function getTypeOverridesValues() {
+  return $('.rto-container').map((_idx, c) => $(c).find('input, select').serialize()).toArray();
 }
 
 // Send galaxy details
@@ -165,7 +239,7 @@ function saveGalaxy() {
       galaxyPlanets: planets,
       galaxyResourceTypes: resourceTypes,
       galaxyAdmins: admins,
-      galaxyResourceTypeOverrides: ["CRmax=1&CRmin=300", "OQmin=3&OQmax=500"]
+      galaxyResourceTypeOverrides: getTypeOverridesValues()
     },
     function(data) {
       var result = $(data).find('resultText').eq(0).text();
@@ -223,13 +297,15 @@ function saveGalaxy() {
               </table>
             </td>
           </tr>
+{% if galaxyID != 'new' and galaxyID != '' %}
           <tr><td colspan=3><h3 title="If your server has additional custom resource min/max values, set them here.">Custom Resource Type Min/Max:</h3></td></tr>
           <tr>
             <td colspan="3">
               <div id="resourceTypeOverridesContainer"></div>
-              <img src="/images/plusGreen32.png" alt="plus sign" title="Add another resource type override row" onclick="setRTlist(addTypeOverrideRow());" style="cursor:pointer;margin-right:120px; width: 15px; padding: 5px"/>
+              <img src="/images/plusGreen32.png" alt="plus sign" title="Add another resource type override row" onclick="addTypeOverrideRow();" style="cursor:pointer;margin-right:120px; width: 15px; padding: 5px"/>
             </td>
           </tr>
+{% endif %}
           <tr><td colspan="3"><h3 title="List any Galaxy Harvester users that should be able to come to this screen and edit this galaxy's details.">Galaxy Admins:</h3></td></tr>
           <tr><td colspan="3"><div id="adminUsers" class="inlineItemBlockList"><input id="adminUserAdd" type="text" size="12" />
 {% for admin in galaxyAdmins %}
