@@ -35,10 +35,8 @@ def getPosition(conn, spawnID, galaxy, statWeights, resourceGroup, serverBestMod
     # calculate column sort by based on quality weights
     for k, v in statWeights.items():
         weightVal = '%.2f' % v
-        # obyStr = ''.join((obyStr, '+CASE WHEN ', k, 'max > 0 THEN (', k, ' / 1000)*', weightVal, ' ELSE ', weightVal, '*.25 END'))
         obyStr += '+CASE WHEN COALESCE(rto.{0}max, rt1.{0}max) > 0 THEN ({0} / 1000)*{1} ELSE {1}*.25 END'.format(k, weightVal)
         obyStr2 = ''.join((obyStr2, '+', weightVal))
-        # maxCheckStr = ''.join((maxCheckStr, '+', k, 'max'))
         maxCheckStr += '+COALESCE(rto.{0}max, rt1.{0}max)'.format(k)
 
     if (obyStr != ''):
