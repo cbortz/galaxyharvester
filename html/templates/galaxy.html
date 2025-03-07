@@ -122,7 +122,18 @@ function addTypeOverrideRow(override = {}) {
 
   $("#resourceTypeOverridesContainer").append(
     $("<div/>", {class: "rto-container ghWidgetBox"})
-      .append($select)
+      .append(
+        $("<div/>", {style: "display: flex; justify-content: space-between; margin-bottom: 10px"})
+          .append($select)
+          .append(
+            $("<img/>", {
+              src: "/images/xRed16.png",
+              title: "Remove override",
+              style: "cursor: pointer",
+              onclick: "removeTypeOverrideRow(this)"
+            })
+          )
+      )
       .append(
         $("<table>", {class: "rto-table"})
           .append($("<thead/>").append($headRow))
@@ -133,6 +144,11 @@ function addTypeOverrideRow(override = {}) {
   loadTypes(type_override_num);
 
   type_override_num += 1;
+}
+
+// remove resource type override table
+function removeTypeOverrideRow(closeBtn) {
+  $(closeBtn).closest(".rto-container").remove();
 }
 
 function typeSelectId(idx) {
@@ -182,12 +198,14 @@ function maskStats(typeSel) {
 }
 
 function maybeMaskStat(stat, statMask, idx, rangeStart, rangeEnd) {
+  const [statMin, statMax] = [`#${stat}min${idx}`, `#${stat}max${idx}`];
+
   if (statMask.substr(rangeStart, rangeEnd) == "0") {
-    $(`#${stat}min${idx}`).attr("disabled", true);
-    $(`#${stat}max${idx}`).attr("disabled", true);
+    $(statMin).attr("disabled", true);
+    $(statMax).attr("disabled", true);
   } else {
-    $(`#${stat}min${idx}`).removeAttr("disabled");
-    $(`#${stat}max${idx}`).removeAttr("disabled");
+    $(statMin).removeAttr("disabled");
+    $(statMax).removeAttr("disabled");
   }
 }
 
