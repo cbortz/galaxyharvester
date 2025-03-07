@@ -173,7 +173,7 @@ function loadTypes(idx) {
 }
 
 function currentGalaxyId() {
-  return $("#galaxySel").val();
+  return '{{ galaxyID }}';
 }
 
 function maskStats(typeSel) {
@@ -249,7 +249,7 @@ function saveGalaxy() {
 
   // send data
   $.post(BASE_SCRIPT_URL + 'postGalaxy.py', {
-      galaxyID: '{{ galaxyID }}',
+      galaxyID: currentGalaxyId(),
       galaxyName: $('#galaxyName').val(),
       galaxyState: $('#galaxyStatus').val(),
       galaxyNGE: $('#oGalaxyNGE').attr('checked'),
