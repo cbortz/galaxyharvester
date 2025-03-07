@@ -149,6 +149,9 @@ def getMobilePlatform(agentString):
 
 	return mobilePlatform
 
+def resourceTypeStatAbbreviations():
+	return ['CR', 'CD', 'DR', 'FL', 'HR', 'MA', 'PE', 'OQ', 'SR', 'UT', 'ER']
+
 def tryInt(v):
 	try:
 		return int(v)

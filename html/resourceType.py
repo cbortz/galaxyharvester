@@ -123,7 +123,45 @@ def main():
 		typeID = dbShared.dbInsertSafe(path[0])
 		cursor = conn.cursor()
 		if (cursor):
-			cursor.execute('SELECT resourceTypeName, rg1.groupName, rg2.groupName, rt.containerType, CRmin, CRmax, CDmin, CDmax, DRmin, DRmax, FLmin, FLmax, HRmin, HRmax, MAmin, MAmax, PEmin, PEmax, OQmin, OQmax, SRmin, SRmax, UTmin, UTmax, ERmin, ERmax, rt.resourceCategory, rt.resourceGroup FROM tResourceType rt INNER JOIN tResourceGroup rg1 ON rt.resourceCategory = rg1.resourceGroup INNER JOIN tResourceGroup rg2 ON rt.resourceGroup = rg2.resourceGroup WHERE resourceType="' + typeID + '";')
+			typeSql = """
+				SELECT
+					resourceTypeName,
+					rg1.groupName,
+					rg2.groupName,
+					rt.containerType,
+					COALESCE(rto.CRmin, rt.CRmin),
+					COALESCE(rto.CRmax, rt.CRmax),
+					COALESCE(rto.CDmin, rt.CDmin),
+					COALESCE(rto.CDmax, rt.CDmax),
+					COALESCE(rto.DRmin, rt.DRmin),
+					COALESCE(rto.DRmax, rt.DRmax),
+					COALESCE(rto.FLmin, rt.FLmin),
+					COALESCE(rto.FLmax, rt.FLmax),
+					COALESCE(rto.HRmin, rt.HRmin),
+					COALESCE(rto.HRmax, rt.HRmax),
+					COALESCE(rto.MAmin, rt.MAmin),
+					COALESCE(rto.MAmax, rt.MAmax),
+					COALESCE(rto.PEmin, rt.PEmin),
+					COALESCE(rto.PEmax, rt.PEmax),
+					COALESCE(rto.OQmin, rt.OQmin),
+					COALESCE(rto.OQmax, rt.OQmax),
+					COALESCE(rto.SRmin, rt.SRmin),
+					COALESCE(rto.SRmax, rt.SRmax),
+					COALESCE(rto.UTmin, rt.UTmin),
+					COALESCE(rto.UTmax, rt.UTmax),
+					COALESCE(rto.ERmin, rt.ERmin),
+					COALESCE(rto.ERmax, rt.ERmax),
+					rt.resourceCategory,
+					rt.resourceGroup
+				FROM
+					tResourceType rt
+					INNER JOIN tResourceGroup rg1 ON rt.resourceCategory = rg1.resourceGroup
+					INNER JOIN tResourceGroup rg2 ON rt.resourceGroup = rg2.resourceGroup
+					LEFT JOIN tResourceTypeOverrides rto ON rto.resourceType = rt.resourceType AND rto.galaxyID = %(galaxy)s
+				WHERE rt.resourceType = %(resourceType)s;
+			"""
+
+			cursor.execute(typeSql, {'galaxy': ghShared.tryInt(galaxy), 'resourceType': typeID})
 			row = cursor.fetchone()
 			if (row != None):
 				typeName = row[0]
