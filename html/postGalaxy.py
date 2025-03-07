@@ -80,10 +80,6 @@ galaxyWebsite = form.getfirst("galaxyWebsite", "")
 galaxyPlanets = form.getfirst("galaxyPlanets", "")
 galaxyResourceTypes = form.getfirst("galaxyResourceTypes", "")
 galaxyResourceTypeOverridesStrList = form.getlist("galaxyResourceTypeOverrides[]")
-sys.stderr.write(str(form.keys))
-sys.stderr.write("\n")
-sys.stderr.write(str(galaxyResourceTypeOverridesStrList))
-sys.stderr.write("\n")
 galaxyAdmins = form.getfirst("galaxyAdmins", "")
 
 galaxyResourceTypeOverrides = []
@@ -91,32 +87,29 @@ for override_str in galaxyResourceTypeOverridesStrList:
 	override = dict(parse_qsl(override_str))
 	override = {
 		'resourceType': override.get('resourceType'),
-		'CDmax': override.get('CDmax'),
-		'CDmin': override.get('CDmin'),
-		'CRmax': override.get('CRmax'),
-		'CRmin': override.get('CRmin'),
-		'DRmax': override.get('DRmax'),
-		'DRmin': override.get('DRmin'),
-		'ERmax': override.get('ERmax'),
-		'ERmin': override.get('ERmin'),
-		'FLmax': override.get('FLmax'),
-		'FLmin': override.get('FLmin'),
-		'HRmax': override.get('HRmax'),
-		'HRmin': override.get('HRmin'),
-		'MAmax': override.get('MAmax'),
-		'MAmin': override.get('MAmin'),
-		'OQmax': override.get('OQmax'),
-		'OQmin': override.get('OQmin'),
-		'PEmax': override.get('PEmax'),
-		'PEmin': override.get('PEmin'),
-		'SRmax': override.get('SRmax'),
-		'SRmin': override.get('SRmin'),
-		'UTmax': override.get('UTmax'),
-		'UTmin': override.get('UTmin'),
+		'CDmax': ghShared.tryInt(override.get('CDmax')),
+		'CDmin': ghShared.tryInt(override.get('CDmin')),
+		'CRmax': ghShared.tryInt(override.get('CRmax')),
+		'CRmin': ghShared.tryInt(override.get('CRmin')),
+		'DRmax': ghShared.tryInt(override.get('DRmax')),
+		'DRmin': ghShared.tryInt(override.get('DRmin')),
+		'ERmax': ghShared.tryInt(override.get('ERmax')),
+		'ERmin': ghShared.tryInt(override.get('ERmin')),
+		'FLmax': ghShared.tryInt(override.get('FLmax')),
+		'FLmin': ghShared.tryInt(override.get('FLmin')),
+		'HRmax': ghShared.tryInt(override.get('HRmax')),
+		'HRmin': ghShared.tryInt(override.get('HRmin')),
+		'MAmax': ghShared.tryInt(override.get('MAmax')),
+		'MAmin': ghShared.tryInt(override.get('MAmin')),
+		'OQmax': ghShared.tryInt(override.get('OQmax')),
+		'OQmin': ghShared.tryInt(override.get('OQmin')),
+		'PEmax': ghShared.tryInt(override.get('PEmax')),
+		'PEmin': ghShared.tryInt(override.get('PEmin')),
+		'SRmax': ghShared.tryInt(override.get('SRmax')),
+		'SRmin': ghShared.tryInt(override.get('SRmin')),
+		'UTmax': ghShared.tryInt(override.get('UTmax')),
+		'UTmin': ghShared.tryInt(override.get('UTmin'))
 	}
-
-	sys.stderr.write(str(override))
-	sys.stderr.write("\n")
 
 	galaxyResourceTypeOverrides.append(override)
 
@@ -256,17 +249,75 @@ def updateGalaxy(galaxyID, galaxyName, galaxyState, galaxyNGE, galaxyWebsite, ga
 	return returnStr
 
 
+def type_override_stat_invalid_pairing(override, stat):
+	stat_min = override.get(f'{stat}min')
+	stat_max = override.get(f'{stat}max')
+
+	if (stat_min == None and stat_max == None):
+		return False
+
+	return (
+		(not isinstance(stat_min, int)) or
+		(not isinstance(stat_max, int)) or
+		(stat_min >= stat_max) or
+		(stat_min < 1)
+	)
+
+def type_override_invalid_pairing(override):
+	return any(
+		type_override_stat_invalid_pairing(override, stat) for stat in ghShared.resourceTypeStatAbbreviations()
+	)
+
+def type_override_stat_empty(override, stat):
+	stat_min = override.get(f'{stat}min')
+	stat_max = override.get(f'{stat}max')
+
+	return stat_min == None and stat_max == None
+
+def type_override_no_stats(override):
+	return all(
+		type_override_stat_empty(override, stat) for stat in ghShared.resourceTypeStatAbbreviations()
+	)
+
+def type_override_duplicate_types(overrides):
+	resourceTypes = [o.get('resourceType') for o in overrides]
+	resourceTypes = [t for t in resourceTypes if t != 'none']
+
+	return len(resourceTypes) != len(set(resourceTypes))
+
+def capture_type_override_errors(overrides):
+	errorStr = ""
+
+	if type_override_duplicate_types(overrides):
+		errorStr += "Error: You must select unique resource types to override. \r\n"
+
+	if any(o.get('resourceType') == 'none' for o in overrides):
+		errorStr += "Error: You must select a type for all resource type overrides. \r\n"
+
+	if any(type_override_no_stats(o) for o in overrides):
+		errorStr += "Error: You must provide at least one stat pairing for all type overrides. \r\n"
+
+	if any(type_override_invalid_pairing(o) for o in overrides):
+		errorStr += "Error: Provided stat pairings for type overrides must be positive integers, where max is greater than min. \r\n"
+
+	return errorStr
+
 #  Check for errors
 errstr = ""
 
 if not len(galaxyName) > 3:
 	errstr = errstr + "Error: You must include the Galaxy name longer than 3 letters. \r\n"
+
 if not len(galaxyWebsite) > 7 or not galaxyWebsite.startswith("http"):
 	errstr = errstr + "Error: You must include a valid website so public server access can be verified.\r\n"
+
 if (len(galaxy) > 0 and galaxy != 'new' and galaxy.isdigit() != True):
 	errstr = errstr + "Error: Galaxy ID was not a valid number.\n"
+
 if len(galaxy) > 0 and galaxy != 'new' and galaxyState.isdigit() != True:
 	errstr = errstr + "Error: Galaxy State was not a valid number.\n"
+
+errstr += capture_type_override_errors(galaxyResourceTypeOverrides)
 
 if galaxyNGE == '1' or galaxyNGE == 'checked':
 	galaxyNGE = 1
