@@ -91,6 +91,9 @@ if galaxy.isdigit():
 		overrides.append(row)
 		row = cursor.fetchone()
 
+	cursor.close()
+	conn.close()
+
 	result = {'overrides': overrides}
 	status = 200
 
