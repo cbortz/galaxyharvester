@@ -894,3 +894,28 @@ body .irrStats {
 	  opacity: 0;
 	}
   }
+
+#resourceTypeOverridesContainer {
+	font-size: 10px;
+}
+
+#resourceTypeOverridesContainer input {
+	font-size: 10px;
+	width: 3em;
+	text-align: right;
+	padding: 0 2px;
+}
+
+#resourceTypeOverridesContainer table thead td {
+	padding-right: 3px;
+}
+
+#resourceTypeOverridesContainer table td {
+	padding: 2px 0;
+	text-align: right;
+}
+
+#resourceTypeOverridesContainer .rto-container {
+	padding: 10px;
+	margin: 10px 0;
+}

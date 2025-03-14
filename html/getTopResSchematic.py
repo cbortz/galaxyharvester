@@ -32,27 +32,54 @@ import ghObjects
 #
 
 def getResourceSQL(maxCheckStr, favCols, joinStr, galaxy, resGroup, obyStr, obyStr2, mine):
-	sqlStr1 = ""
-	sqlStr1 = 'SELECT spawnID, spawnName, tResources.galaxy, entered, enteredBy, tResources.resourceType, resourceTypeName, resourceGroup,'
-	sqlStr1 += ' CR, CD, DR, FL, HR, MA, PE, OQ, SR, UT, ER,'
-	sqlStr1 += ' CASE WHEN CRmax > 0 THEN ((CR-CRmin) / (CRmax-CRmin))*100 ELSE NULL END AS CRperc, CASE WHEN CDmax > 0 THEN ((CD-CDmin) / (CDmax-CDmin))*100 ELSE NULL END AS CDperc, CASE WHEN DRmax > 0 THEN ((DR-DRmin) / (DRmax-DRmin))*100 ELSE NULL END AS DRperc, CASE WHEN FLmax > 0 THEN ((FL-FLmin) / (FLmax-FLmin))*100 ELSE NULL END AS FLperc, CASE WHEN HRmax > 0 THEN ((HR-HRmin) / (HRmax-HRmin))*100 ELSE NULL END AS HRperc, CASE WHEN MAmax > 0 THEN ((MA-MAmin) / (MAmax-MAmin))*100 ELSE NULL END AS MAperc, CASE WHEN PEmax > 0 THEN ((PE-PEmin) / (PEmax-PEmin))*100 ELSE NULL END AS PEperc, CASE WHEN OQmax > 0 THEN ((OQ-OQmin) / (OQmax-OQmin))*100 ELSE NULL END AS OQperc, CASE WHEN SRmax > 0 THEN ((SR-SRmin) / (SRmax-SRmin))*100 ELSE NULL END AS SRperc, CASE WHEN UTmax > 0 THEN ((UT-UTmin) / (UTmax-UTmin))*100 ELSE NULL END AS UTperc, CASE WHEN ERmax > 0 THEN ((ER-ERmin) / (ERmax-ERmin))*100 ELSE NULL END AS ERperc,'
-	sqlStr1 += ' containerType, verified, verifiedBy, unavailable, unavailableBy, '
-	sqlStr1 = sqlStr1 + maxCheckStr + favCols + ', (' + obyStr + ') / (' + obyStr2 + ') AS overallScore FROM tResources INNER JOIN tResourceType ON tResources.resourceType = tResourceType.resourceType' + joinStr
+	sqlStr1 = """
+		SELECT
+			spawnID, spawnName, tResources.galaxy, entered, enteredBy, tResources.resourceType, resourceTypeName, resourceGroup,
+			CR, CD, DR, FL, HR, MA, PE, OQ, SR, UT, ER,
+			CASE WHEN COALESCE(rto.CRmax, rt1.CRmax) > 0 THEN ((CR - COALESCE(rto.CRmin, rt1.CRmin)) / (COALESCE(rto.CRmax, rt1.CRmax) - COALESCE(rto.CRmin, rt1.CRmin)))*100 ELSE NULL END AS CRperc,
+			CASE WHEN COALESCE(rto.CDmax, rt1.CDmax) > 0 THEN ((CD - COALESCE(rto.CDmin, rt1.CDmin)) / (COALESCE(rto.CDmax, rt1.CDmax) - COALESCE(rto.CDmin, rt1.CDmin)))*100 ELSE NULL END AS CDperc,
+			CASE WHEN COALESCE(rto.DRmax, rt1.DRmax) > 0 THEN ((DR - COALESCE(rto.DRmin, rt1.DRmin)) / (COALESCE(rto.DRmax, rt1.DRmax) - COALESCE(rto.DRmin, rt1.DRmin)))*100 ELSE NULL END AS DRperc,
+			CASE WHEN COALESCE(rto.FLmax, rt1.FLmax) > 0 THEN ((FL - COALESCE(rto.FLmin, rt1.FLmin)) / (COALESCE(rto.FLmax, rt1.FLmax) - COALESCE(rto.FLmin, rt1.FLmin)))*100 ELSE NULL END AS FLperc,
+			CASE WHEN COALESCE(rto.HRmax, rt1.HRmax) > 0 THEN ((HR - COALESCE(rto.HRmin, rt1.HRmin)) / (COALESCE(rto.HRmax, rt1.HRmax) - COALESCE(rto.HRmin, rt1.HRmin)))*100 ELSE NULL END AS HRperc,
+			CASE WHEN COALESCE(rto.MAmax, rt1.MAmax) > 0 THEN ((MA - COALESCE(rto.MAmin, rt1.MAmin)) / (COALESCE(rto.MAmax, rt1.MAmax) - COALESCE(rto.MAmin, rt1.MAmin)))*100 ELSE NULL END AS MAperc,
+			CASE WHEN COALESCE(rto.PEmax, rt1.PEmax) > 0 THEN ((PE - COALESCE(rto.PEmin, rt1.PEmin)) / (COALESCE(rto.PEmax, rt1.PEmax) - COALESCE(rto.PEmin, rt1.PEmin)))*100 ELSE NULL END AS PEperc,
+			CASE WHEN COALESCE(rto.OQmax, rt1.OQmax) > 0 THEN ((OQ - COALESCE(rto.OQmin, rt1.OQmin)) / (COALESCE(rto.OQmax, rt1.OQmax) - COALESCE(rto.OQmin, rt1.OQmin)))*100 ELSE NULL END AS OQperc,
+			CASE WHEN COALESCE(rto.SRmax, rt1.SRmax) > 0 THEN ((SR - COALESCE(rto.SRmin, rt1.SRmin)) / (COALESCE(rto.SRmax, rt1.SRmax) - COALESCE(rto.SRmin, rt1.SRmin)))*100 ELSE NULL END AS SRperc,
+			CASE WHEN COALESCE(rto.UTmax, rt1.UTmax) > 0 THEN ((UT - COALESCE(rto.UTmin, rt1.UTmin)) / (COALESCE(rto.UTmax, rt1.UTmax) - COALESCE(rto.UTmin, rt1.UTmin)))*100 ELSE NULL END AS UTperc,
+			CASE WHEN COALESCE(rto.ERmax, rt1.ERmax) > 0 THEN ((ER - COALESCE(rto.ERmin, rt1.ERmin)) / (COALESCE(rto.ERmax, rt1.ERmax) - COALESCE(rto.ERmin, rt1.ERmin)))*100 ELSE NULL END AS ERperc,
+			containerType, verified, verifiedBy, unavailable, unavailableBy,
+			{maxCheckStr} {favCols}, ({obyStr}) / ({obyStr2}) AS overallScore
+		FROM tResources
+			INNER JOIN tResourceType rt1 ON tResources.resourceType = rt1.resourceType
+			LEFT JOIN tResourceTypeOverrides rto ON rto.resourceType = tResources.resourceType AND rto.galaxyID = tResources.galaxy
+			{joinStr}
+	"""
+
 	if (resGroup != 'any' and resGroup != ''):
-		sqlStr1 += ' INNER JOIN (SELECT resourceType FROM tResourceTypeGroup WHERE resourceGroup="' + resGroup + '" OR resourceType="' + resGroup + '" GROUP BY resourceType) rtg ON tResources.resourceType = rtg.resourceType'
+		sqlStr1 += ' INNER JOIN (SELECT resourceType FROM tResourceTypeGroup WHERE resourceGroup="{resGroup}" OR resourceType="{resGroup}" GROUP BY resourceType) rtg ON tResources.resourceType = rtg.resourceType'
+
 	if unavailable == '1' or mine != '':
-		sqlStr1 += ' WHERE tResources.galaxy=' + galaxy
+		sqlStr1 += ' WHERE tResources.galaxy={galaxy}'
 	else:
-		sqlStr1 += ' WHERE tResources.galaxy=' + galaxy + ' AND unavailable IS NULL'
+		sqlStr1 += ' WHERE tResources.galaxy={galaxy} AND unavailable IS NULL'
+
 	if mine != '':
 		sqlStr1 += " AND favGroup IS NOT NULL AND favGroup NOT IN ('Surveying', 'Shopping')"
+
 	if obyStr != '':
-		sqlStr1 += ' ORDER BY ('
-		sqlStr1 += obyStr
-		sqlStr1 += ') / (' + obyStr2 + ')'
-		sqlStr1 += ' DESC LIMIT 3'
+		sqlStr1 += ' ORDER BY ({obyStr}) / ({obyStr2}) DESC LIMIT 3'
+
 	sqlStr1 += ';'
-	return sqlStr1
+
+	return sqlStr1.format(
+		favCols=favCols,
+		galaxy=galaxy,
+		joinStr=joinStr,
+		maxCheckStr=maxCheckStr,
+		obyStr2=obyStr2,
+		obyStr=obyStr,
+		resGroup=resGroup
+	)
 
 def getResourceData(conn, resSQL, logged_state, galaxyState, resourceFormat, reputation, statsMatter):
 	# get resource data for given criteria
@@ -250,9 +277,9 @@ else:
 			# calculate column sort by based on quality weights
 			for k, v in stats.items():
 				weightVal = '%.2f' % (v / weightTotal * 200)
-				obyStr = obyStr + '+CASE WHEN ' + k + 'max > 0 THEN (' + k + ' / 1000)*' + weightVal + ' ELSE ' + weightVal + '*.25 END'
-				obyStr2 = obyStr2 + '+' + weightVal
-				maxCheckStr = maxCheckStr + '+' + k + 'max'
+				obyStr += '+CASE WHEN COALESCE(rto.{0}max, rt1.{0}max) > 0 THEN ({0} / 1000)*{1} ELSE {1} *.25 END'.format(k, weightVal)
+				obyStr2 += '+' + weightVal
+				maxCheckStr += '+COALESCE(rto.{0}max, rt1.{0}max)'.format(k)
 			#sys.stderr.write(' (' + obyStr + ') / (' + obyStr2 + ')\n')
 			if (obyStr != ''):
 				obyStr = obyStr[1:]

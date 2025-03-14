@@ -31,6 +31,7 @@ import pymysql
 import smtplib
 from email.message import EmailMessage
 from xml.dom import minidom
+from urllib.parse import parse_qsl
 import ghNames
 import ghShared
 sys.path.append("../")
@@ -78,7 +79,40 @@ galaxyNGE = form.getfirst("galaxyNGE", "0")
 galaxyWebsite = form.getfirst("galaxyWebsite", "")
 galaxyPlanets = form.getfirst("galaxyPlanets", "")
 galaxyResourceTypes = form.getfirst("galaxyResourceTypes", "")
+galaxyResourceTypeOverridesStrList = form.getlist("galaxyResourceTypeOverrides[]")
 galaxyAdmins = form.getfirst("galaxyAdmins", "")
+
+galaxyResourceTypeOverrides = []
+for override_str in galaxyResourceTypeOverridesStrList:
+	override = dict(parse_qsl(override_str))
+	override = {
+		'resourceType': override.get('resourceType'),
+		'CDmax': ghShared.tryInt(override.get('CDmax')),
+		'CDmin': ghShared.tryInt(override.get('CDmin')),
+		'CRmax': ghShared.tryInt(override.get('CRmax')),
+		'CRmin': ghShared.tryInt(override.get('CRmin')),
+		'DRmax': ghShared.tryInt(override.get('DRmax')),
+		'DRmin': ghShared.tryInt(override.get('DRmin')),
+		'ERmax': ghShared.tryInt(override.get('ERmax')),
+		'ERmin': ghShared.tryInt(override.get('ERmin')),
+		'FLmax': ghShared.tryInt(override.get('FLmax')),
+		'FLmin': ghShared.tryInt(override.get('FLmin')),
+		'HRmax': ghShared.tryInt(override.get('HRmax')),
+		'HRmin': ghShared.tryInt(override.get('HRmin')),
+		'MAmax': ghShared.tryInt(override.get('MAmax')),
+		'MAmin': ghShared.tryInt(override.get('MAmin')),
+		'OQmax': ghShared.tryInt(override.get('OQmax')),
+		'OQmin': ghShared.tryInt(override.get('OQmin')),
+		'PEmax': ghShared.tryInt(override.get('PEmax')),
+		'PEmin': ghShared.tryInt(override.get('PEmin')),
+		'SRmax': ghShared.tryInt(override.get('SRmax')),
+		'SRmin': ghShared.tryInt(override.get('SRmin')),
+		'UTmax': ghShared.tryInt(override.get('UTmax')),
+		'UTmin': ghShared.tryInt(override.get('UTmin'))
+	}
+
+	galaxyResourceTypeOverrides.append(override)
+
 # escape input to prevent sql injection
 sid = dbShared.dbInsertSafe(sid)
 galaxy = dbShared.dbInsertSafe(galaxy)
@@ -161,7 +195,7 @@ def addGalaxy(galaxyName, galaxyNGE, galaxyWebsite, galaxyPlanets, galaxyResourc
 	conn.close()
 	return returnStr
 
-def updateGalaxy(galaxyID, galaxyName, galaxyState, galaxyNGE, galaxyWebsite, galaxyPlanets, galaxyResourceTypes, galaxyAdmins):
+def updateGalaxy(galaxyID, galaxyName, galaxyState, galaxyNGE, galaxyWebsite, galaxyPlanets, galaxyResourceTypes, galaxyResourceTypeOverrides, galaxyAdmins):
 	# Update galaxy information
 	returnStr = ""
 	result = 0
@@ -184,11 +218,27 @@ def updateGalaxy(galaxyID, galaxyName, galaxyState, galaxyNGE, galaxyWebsite, ga
 			cursor.execute('INSERT INTO tGalaxyResourceType (galaxyID, resourceType) VALUES (%s, %s)', [galaxyID, resourceType])
 			result = result + cursor.rowcount
 
+	cursor.execute("DELETE FROM tResourceTypeOverrides WHERE galaxyID=%s;", [galaxyID])
+	for resourceTypeOverride in galaxyResourceTypeOverrides:
+		if isinstance(resourceTypeOverride, dict):
+			cursor.execute(
+				"""
+					INSERT INTO tResourceTypeOverrides (
+						galaxyID, resourceType, CDmax, CDmin, CRmax, CRmin, DRmax, DRmin, ERmax, ERmin, FLmax, FLmin, HRmax, HRmin, MAmax, MAmin, OQmax, OQmin, PEmax, PEmin, SRmax, SRmin, UTmax, UTmin
+					) VALUES (
+						%(galaxyID)s, %(resourceType)s, %(CDmax)s, %(CDmin)s, %(CRmax)s, %(CRmin)s, %(DRmax)s, %(DRmin)s, %(ERmax)s, %(ERmin)s, %(FLmax)s, %(FLmin)s, %(HRmax)s, %(HRmin)s, %(MAmax)s, %(MAmin)s, %(OQmax)s, %(OQmin)s, %(PEmax)s, %(PEmin)s, %(SRmax)s, %(SRmin)s, %(UTmax)s, %(UTmin)s
+					)
+				""",
+				{**resourceTypeOverride, **{'galaxyID': ghShared.tryInt(galaxyID)}}
+			)
+			result = result + cursor.rowcount
+
 	cursor.execute("DELETE FROM tGalaxyUser WHERE galaxyID=%s AND roleType='a';", [galaxyID])
 	for user in galaxyAdmins:
 		if len(user) > 0:
 			cursor.execute("INSERT INTO tGalaxyUser (galaxyID, userID, roleType) VALUES (%s, %s, %s);", [galaxyID, user, "a"])
 			result = result + cursor.rowcount
+
 	if (result < 1):
 		returnStr = "Error: galaxy data not updated."
 	else:
@@ -199,17 +249,75 @@ def updateGalaxy(galaxyID, galaxyName, galaxyState, galaxyNGE, galaxyWebsite, ga
 	return returnStr
 
 
+def type_override_stat_invalid_pairing(override, stat):
+	stat_min = override.get(f'{stat}min')
+	stat_max = override.get(f'{stat}max')
+
+	if (stat_min == None and stat_max == None):
+		return False
+
+	return (
+		(not isinstance(stat_min, int)) or
+		(not isinstance(stat_max, int)) or
+		(stat_min >= stat_max) or
+		(stat_min < 1)
+	)
+
+def type_override_invalid_pairing(override):
+	return any(
+		type_override_stat_invalid_pairing(override, stat) for stat in ghShared.resourceTypeStatAbbreviations()
+	)
+
+def type_override_stat_empty(override, stat):
+	stat_min = override.get(f'{stat}min')
+	stat_max = override.get(f'{stat}max')
+
+	return stat_min == None and stat_max == None
+
+def type_override_no_stats(override):
+	return all(
+		type_override_stat_empty(override, stat) for stat in ghShared.resourceTypeStatAbbreviations()
+	)
+
+def type_override_duplicate_types(overrides):
+	resourceTypes = [o.get('resourceType') for o in overrides]
+	resourceTypes = [t for t in resourceTypes if t != 'none']
+
+	return len(resourceTypes) != len(set(resourceTypes))
+
+def capture_type_override_errors(overrides):
+	errorStr = ""
+
+	if type_override_duplicate_types(overrides):
+		errorStr += "Error: You must select unique resource types to override. \r\n"
+
+	if any(o.get('resourceType') == 'none' for o in overrides):
+		errorStr += "Error: You must select a type for all resource type overrides. \r\n"
+
+	if any(type_override_no_stats(o) for o in overrides):
+		errorStr += "Error: You must provide at least one stat pairing for all type overrides. \r\n"
+
+	if any(type_override_invalid_pairing(o) for o in overrides):
+		errorStr += "Error: Provided stat pairings for type overrides must be positive integers, where max is greater than min. \r\n"
+
+	return errorStr
+
 #  Check for errors
 errstr = ""
 
 if not len(galaxyName) > 3:
 	errstr = errstr + "Error: You must include the Galaxy name longer than 3 letters. \r\n"
+
 if not len(galaxyWebsite) > 7 or not galaxyWebsite.startswith("http"):
 	errstr = errstr + "Error: You must include a valid website so public server access can be verified.\r\n"
+
 if (len(galaxy) > 0 and galaxy != 'new' and galaxy.isdigit() != True):
 	errstr = errstr + "Error: Galaxy ID was not a valid number.\n"
+
 if len(galaxy) > 0 and galaxy != 'new' and galaxyState.isdigit() != True:
 	errstr = errstr + "Error: Galaxy State was not a valid number.\n"
+
+errstr += capture_type_override_errors(galaxyResourceTypeOverrides)
 
 if galaxyNGE == '1' or galaxyNGE == 'checked':
 	galaxyNGE = 1
@@ -240,7 +348,7 @@ if (errstr == ""):
 					# Get user galaxy admin status
 					adminList = dbShared.getGalaxyAdminList(conn, currentUser)
 					if '<option value="{0}">'.format(galaxy) in adminList:
-						result = updateGalaxy(galaxy, galaxyName, galaxyState, galaxyNGE, galaxyWebsite, galaxyPlanets, galaxyResourceTypes, galaxyAdmins)
+						result = updateGalaxy(galaxy, galaxyName, galaxyState, galaxyNGE, galaxyWebsite, galaxyPlanets, galaxyResourceTypes, galaxyResourceTypeOverrides, galaxyAdmins)
 					else:
 						result = "Error: You are not listed as an administrator of that galaxy.\n"
 			else:
