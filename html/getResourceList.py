@@ -145,38 +145,42 @@ else:
 	galaxyState = dbShared.galaxyState(galaxy)
 
 if (resGroup != "any" and resGroup != ""):
-	joinStr = joinStr + " INNER JOIN (SELECT resourceType FROM tResourceTypeGroup WHERE resourceGroup='" + resGroup + "' GROUP BY resourceType) rtgg ON rt1.resourceType = rtgg.resourceType"
+	joinStr += " INNER JOIN (SELECT resourceType FROM tResourceTypeGroup WHERE resourceGroup=%(resGroup)s GROUP BY resourceType) rtgg ON rt1.resourceType = rtgg.resourceType"
+
 if (resCategory != "any" and resCategory != ""):
-	joinStr = joinStr + " INNER JOIN (SELECT resourceType FROM tResourceTypeGroup WHERE resourceGroup='" + resCategory + "' GROUP BY resourceType) rtgc ON rt1.resourceType = rtgc.resourceType"
+	joinStr += " INNER JOIN (SELECT resourceType FROM tResourceTypeGroup WHERE resourceGroup=%(resCategory)s GROUP BY resourceType) rtgc ON rt1.resourceType = rtgc.resourceType"
 
 if (unavailableDays != None and unavailableDays.isdigit()):
 	if (unavailableDays == "0"):
-		criteriaStr = "tResources.galaxy=" + galaxy + " AND unavailable IS NULL"
+		criteriaStr = "tResources.galaxy=%(galaxy)s AND unavailable IS NULL"
 	else:
 		if (resType != "any" and resType != "") or (resGroup != "any" and resGroup != ""):
-			criteriaStr = "tResources.galaxy=" + galaxy + " AND (unavailable IS NULL OR DATEDIFF(NOW(),unavailable) <= " + unavailableDays + ")"
+			criteriaStr = "tResources.galaxy=%(galaxy)s AND (unavailable IS NULL OR DATEDIFF(NOW(),unavailable) <= " + unavailableDays + ")"
 		else:
 			errorStr = "You must select a resource type or group when searching for unavailable resources."
 else:
-	criteriaStr = "tResources.galaxy=" + galaxy + " AND unavailable IS NULL"
+	criteriaStr = "tResources.galaxy=%(galaxy)s AND unavailable IS NULL"
 
 if (planet == "" and planetName != ""):
 	planet = dbShared.getPlanetID(planetName)
+
 if (planet != "any" and planet !="null" and planet != "" and planet != "0"):
 	unPlanetStr = ",'"+planet+"'"
-	criteriaStr = criteriaStr + " AND EXISTS (SELECT planetID FROM tResourcePlanet WHERE spawnID = tResources.spawnID AND planetID=" + planet + " AND unavailable IS NULL)"
+	criteriaStr = criteriaStr + " AND EXISTS (SELECT planetID FROM tResourcePlanet WHERE spawnID = tResources.spawnID AND planetID=%(planetID)s AND unavailable IS NULL)"
 
 if (resType != "any" and resType != ""):
-	criteriaStr = criteriaStr + " AND tResources.resourceType='" + resType + "'"
+	criteriaStr = criteriaStr + " AND tResources.resourceType=%(resType)s"
 
 if logged_state == 1:
 	#for later when nonpublic waypoints in
 	#wpCriteria = 'shareLevel=256 OR owner="' + currentUser + '" OR (shareLevel=64 AND owner IN (SELECT f1.friendID FROM tUserFriends f1 INNER JOIN tUserFriends f2 ON f1.userID=f2.friendID WHERE f1.userID="' + currentUser + '")) OR waypointID IN (SELECT uw.waypointID FROM tUserWaypoints uw WHERE unlocked IS NOT NULL AND uw.userID="' + currentUser + '")'
 	wpCriteria = 'shareLevel=256'
+
 	if favorite == "on":
-		joinStr = joinStr + " INNER JOIN (SELECT itemID, favGroup, units FROM tFavorites WHERE userID='" + currentUser + "' AND favType=1) favs ON tResources.spawnID = favs.itemID"
+		joinStr += " INNER JOIN (SELECT itemID, favGroup, units FROM tFavorites WHERE userID=%(currentUser)s AND favType=1) favs ON tResources.spawnID = favs.itemID"
 	else:
-		joinStr = joinStr + ' LEFT JOIN (SELECT itemID, favGroup, units FROM tFavorites WHERE userID="' + currentUser + '" AND favType=1) favs ON tResources.spawnID = favs.itemID'
+		joinStr += ' LEFT JOIN (SELECT itemID, favGroup, units FROM tFavorites WHERE userID=%(currentUser)s AND favType=1) favs ON tResources.spawnID = favs.itemID'
+
 	favCols = ', favGroup, units'
 else:
 	wpCriteria = 'shareLevel=256'
@@ -228,23 +232,58 @@ if (errorStr == ""):
 
 	cursor = conn.cursor()
 	if (cursor):
-		sqlStr1 = 'SELECT spawnID, spawnName, tResources.galaxy, entered, enteredBy, tResources.resourceType, rt1.resourceTypeName, rt1.resourceGroup,'
-		sqlStr1 += ' CR, CD, DR, FL, HR, MA, PE, OQ, SR, UT, ER,'
-		sqlStr1 += ' CASE WHEN rt1.CRmax > 0 THEN ((CR-rt1.CRmin) / (rt1.CRmax-rt1.CRmin))*100 ELSE NULL END AS CRperc,'
-		sqlStr1 += ' CASE WHEN rt1.CDmax > 0 THEN ((CD-rt1.CDmin) / (rt1.CDmax-rt1.CDmin))*100 ELSE NULL END AS CDperc,'
-		sqlStr1 += ' CASE WHEN rt1.DRmax > 0 THEN ((DR-rt1.DRmin) / (rt1.DRmax-rt1.DRmin))*100 ELSE NULL END AS DRperc,'
-		sqlStr1 += ' CASE WHEN rt1.FLmax > 0 THEN ((FL-rt1.FLmin) / (rt1.FLmax-rt1.FLmin))*100 ELSE NULL END AS FLperc,'
-		sqlStr1 += ' CASE WHEN rt1.HRmax > 0 THEN ((HR-rt1.HRmin) / (rt1.HRmax-rt1.HRmin))*100 ELSE NULL END AS HRperc,'
-		sqlStr1 += ' CASE WHEN rt1.MAmax > 0 THEN ((MA-rt1.MAmin) / (rt1.MAmax-rt1.MAmin))*100 ELSE NULL END AS MAperc,'
-		sqlStr1 += ' CASE WHEN rt1.PEmax > 0 THEN ((PE-rt1.PEmin) / (rt1.PEmax-rt1.PEmin))*100 ELSE NULL END AS PEperc,'
-		sqlStr1 += ' CASE WHEN rt1.OQmax > 0 THEN ((OQ-rt1.OQmin) / (rt1.OQmax-rt1.OQmin))*100 ELSE NULL END AS OQperc,'
-		sqlStr1 += ' CASE WHEN rt1.SRmax > 0 THEN ((SR-rt1.SRmin) / (rt1.SRmax-rt1.SRmin))*100 ELSE NULL END AS SRperc,'
-		sqlStr1 += ' CASE WHEN rt1.UTmax > 0 THEN ((UT-rt1.UTmin) / (rt1.UTmax-rt1.UTmin))*100 ELSE NULL END AS UTperc,'
-		sqlStr1 += ' CASE WHEN rt1.ERmax > 0 THEN ((ER-rt1.ERmin) / (rt1.ERmax-rt1.ERmin))*100 ELSE NULL END AS ERperc,'
-		sqlStr1 += ' rt1.containerType, verified, verifiedBy, unavailable, unavailableBy, rg1.groupName, rt1.resourceCategory, rg2.groupName AS categoryName, rt1.resourceGroup, (SELECT Max(concentration) FROM tWaypoint WHERE tWaypoint.spawnID=tResources.spawnID AND (' + wpCriteria + ')) AS wpMaxConc' + favCols + ' FROM tResources INNER JOIN tResourceType rt1 ON tResources.resourceType = rt1.resourceType INNER JOIN tResourceGroup rg1 ON rt1.resourceGroup = rg1.resourceGroup INNER JOIN tResourceGroup rg2 ON rt1.resourceCategory = rg2.resourceGroup' + joinStr + ' WHERE ' + criteriaStr
-		sqlStr1 = sqlStr1 + orderStr + ';'
-		#sys.stderr.write(sqlStr1)
-		cursor.execute(sqlStr1)
+		sqlStr = """
+		SELECT
+			spawnID,
+			spawnName,
+			tResources.galaxy,
+			entered, enteredBy,
+			tResources.resourceType,
+			rt1.resourceTypeName,
+			rt1.resourceGroup,
+			CR, CD, DR, FL, HR, MA, PE, OQ, SR, UT, ER,
+			CASE WHEN rt1.CRmax > 0 THEN ((CR - COALESCE(rto.CRmin, rt1.CRmin)) / (COALESCE(rto.CRmax, rt1.CRmax) - COALESCE(rto.CRmin, rt1.CRmin)))*100 ELSE NULL END AS CRperc,
+			CASE WHEN rt1.CDmax > 0 THEN ((CD - COALESCE(rto.CDmin, rt1.CDmin)) / (COALESCE(rto.CDmax, rt1.CDmax) - COALESCE(rto.CDmin, rt1.CDmin)))*100 ELSE NULL END AS CDperc,
+			CASE WHEN rt1.DRmax > 0 THEN ((DR - COALESCE(rto.DRmin, rt1.DRmin)) / (COALESCE(rto.DRmax, rt1.DRmax) - COALESCE(rto.DRmin, rt1.DRmin)))*100 ELSE NULL END AS DRperc,
+			CASE WHEN rt1.FLmax > 0 THEN ((FL - COALESCE(rto.FLmin, rt1.FLmin)) / (COALESCE(rto.FLmax, rt1.FLmax) - COALESCE(rto.FLmin, rt1.FLmin)))*100 ELSE NULL END AS FLperc,
+			CASE WHEN rt1.HRmax > 0 THEN ((HR - COALESCE(rto.HRmin, rt1.HRmin)) / (COALESCE(rto.HRmax, rt1.HRmax) - COALESCE(rto.HRmin, rt1.HRmin)))*100 ELSE NULL END AS HRperc,
+			CASE WHEN rt1.MAmax > 0 THEN ((MA - COALESCE(rto.MAmin, rt1.MAmin)) / (COALESCE(rto.MAmax, rt1.MAmax) - COALESCE(rto.MAmin, rt1.MAmin)))*100 ELSE NULL END AS MAperc,
+			CASE WHEN rt1.PEmax > 0 THEN ((PE - COALESCE(rto.PEmin, rt1.PEmin)) / (COALESCE(rto.PEmax, rt1.PEmax) - COALESCE(rto.PEmin, rt1.PEmin)))*100 ELSE NULL END AS PEperc,
+			CASE WHEN rt1.OQmax > 0 THEN ((OQ - COALESCE(rto.OQmin, rt1.OQmin)) / (COALESCE(rto.OQmax, rt1.OQmax) - COALESCE(rto.OQmin, rt1.OQmin)))*100 ELSE NULL END AS OQperc,
+			CASE WHEN rt1.SRmax > 0 THEN ((SR - COALESCE(rto.SRmin, rt1.SRmin)) / (COALESCE(rto.SRmax, rt1.SRmax) - COALESCE(rto.SRmin, rt1.SRmin)))*100 ELSE NULL END AS SRperc,
+			CASE WHEN rt1.UTmax > 0 THEN ((UT - COALESCE(rto.UTmin, rt1.UTmin)) / (COALESCE(rto.UTmax, rt1.UTmax) - COALESCE(rto.UTmin, rt1.UTmin)))*100 ELSE NULL END AS UTperc,
+			CASE WHEN rt1.ERmax > 0 THEN ((ER - COALESCE(rto.ERmin, rt1.ERmin)) / (COALESCE(rto.ERmax, rt1.ERmax) - COALESCE(rto.ERmin, rt1.ERmin)))*100 ELSE NULL END AS ERperc,
+			rt1.containerType,
+			verified,
+			verifiedBy,
+			unavailable,
+			unavailableBy,
+			rg1.groupName,
+			rt1.resourceCategory,
+			rg2.groupName AS categoryName,
+			rt1.resourceGroup,
+			(SELECT Max(concentration) FROM tWaypoint WHERE tWaypoint.spawnID=tResources.spawnID AND ({wpCriteria})) AS wpMaxConc{favCols}
+		FROM
+			tResources
+			INNER JOIN tResourceType rt1 ON tResources.resourceType = rt1.resourceType
+			INNER JOIN tResourceGroup rg1 ON rt1.resourceGroup = rg1.resourceGroup
+			INNER JOIN tResourceGroup rg2 ON rt1.resourceCategory = rg2.resourceGroup
+			LEFT JOIN tResourceTypeOverrides rto ON rto.resourceType = tResources.resourceType AND rto.galaxyID = tResources.galaxy
+			{joinStr}
+			WHERE {criteriaStr}
+			{orderStr};
+		""".format(wpCriteria=wpCriteria, favCols=favCols, joinStr=joinStr, criteriaStr=criteriaStr, orderStr=orderStr)
+
+		#sys.stderr.write(sqlStr)
+		cursor.execute(sqlStr, {
+			'currentUser': currentUser,
+			'galaxy': ghShared.tryInt(galaxy),
+			'planetID': ghShared.tryInt(planet),
+			'resCategory': resCategory,
+			'resGroup': resGroup,
+			'resType': resType
+		})
+
 		row = cursor.fetchone()
 		while (row != None):
 			# group by resource group
