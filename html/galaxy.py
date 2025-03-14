@@ -78,7 +78,6 @@ def getElectiveResourceTypeList(conn, galaxy, available):
 	cursor.close()
 	return listHTML
 
-
 def main():
 	useCookies = 1
 	linkappend = ''
