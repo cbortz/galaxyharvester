@@ -63,15 +63,15 @@ def getResourceHistory(conn, spawnID):
 
 def getResource(conn, logged_state, currentUser, spawnID, galaxy, spawnName):
 	if logged_state == 1:
-		favJoin = ' LEFT JOIN (SELECT itemID, favGroup, units FROM tFavorites WHERE userID="' + currentUser + '" AND favType=1) favs ON tResources.spawnID = favs.itemID'
+		favJoin = ' LEFT JOIN (SELECT itemID, favGroup, units FROM tFavorites WHERE userID=%(currentUser)s AND favType=1) favs ON tResources.spawnID = favs.itemID'
 		favCols = ', favGroup, units'
 	else:
 		favJoin = ''
 		favCols = ', NULL, NULL'
 	if spawnID != None:
-		criteriaStr = 'spawnID=' + str(spawnID)
+		criteriaStr = 'spawnID=%(spawnID)s'
 	else:
-		criteriaStr = 'galaxy=' + galaxy + ' AND spawnName="' + spawnName + '"'
+		criteriaStr = 'galaxy=%(galaxy)s AND spawnName=%(spawnName)s'
 
 	try:
 		cursor = conn.cursor()
@@ -79,21 +79,38 @@ def getResource(conn, logged_state, currentUser, spawnID, galaxy, spawnName):
 		errorstr = "Error: could not connect to database"
 
 	if (cursor):
-		sqlStr = 'SELECT spawnID, spawnName, galaxy, entered, enteredBy, tResources.resourceType, rt1.resourceTypeName, rt1.resourceGroup,'
-		sqlStr += ' CR, CD, DR, FL, HR, MA, PE, OQ, SR, UT, ER,'
-		sqlStr += ' CASE WHEN rt1.CRmax > 0 THEN ((CR-rt1.CRmin) / (rt1.CRmax-rt1.CRmin))*100 ELSE NULL END AS CRperc,'
-		sqlStr += ' CASE WHEN rt1.CDmax > 0 THEN ((CD-rt1.CDmin) / (rt1.CDmax-rt1.CDmin))*100 ELSE NULL END AS CDperc,'
-		sqlStr += ' CASE WHEN rt1.DRmax > 0 THEN ((DR-rt1.DRmin) / (rt1.DRmax-rt1.DRmin))*100 ELSE NULL END AS DRperc,'
-		sqlStr += ' CASE WHEN rt1.FLmax > 0 THEN ((FL-rt1.FLmin) / (rt1.FLmax-rt1.FLmin))*100 ELSE NULL END AS FLperc,'
-		sqlStr += ' CASE WHEN rt1.HRmax > 0 THEN ((HR-rt1.HRmin) / (rt1.HRmax-rt1.HRmin))*100 ELSE NULL END AS HRperc,'
-		sqlStr += ' CASE WHEN rt1.MAmax > 0 THEN ((MA-rt1.MAmin) / (rt1.MAmax-rt1.MAmin))*100 ELSE NULL END AS MAperc,'
-		sqlStr += ' CASE WHEN rt1.PEmax > 0 THEN ((PE-rt1.PEmin) / (rt1.PEmax-rt1.PEmin))*100 ELSE NULL END AS PEperc,'
-		sqlStr += ' CASE WHEN rt1.OQmax > 0 THEN ((OQ-rt1.OQmin) / (rt1.OQmax-rt1.OQmin))*100 ELSE NULL END AS OQperc,'
-		sqlStr += ' CASE WHEN rt1.SRmax > 0 THEN ((SR-rt1.SRmin) / (rt1.SRmax-rt1.SRmin))*100 ELSE NULL END AS SRperc,'
-		sqlStr += ' CASE WHEN rt1.UTmax > 0 THEN ((UT-rt1.UTmin) / (rt1.UTmax-rt1.UTmin))*100 ELSE NULL END AS UTperc,'
-		sqlStr += ' CASE WHEN rt1.ERmax > 0 THEN ((ER-rt1.ERmin) / (rt1.ERmax-rt1.ERmin))*100 ELSE NULL END AS ERperc,'
-		sqlStr += ' rt1.containerType, verified, verifiedBy, unavailable, unavailableBy, rg1.groupName, rt1.resourceCategory, rg2.groupName AS categoryName' + favCols + ', (SELECT GROUP_CONCAT(resourceGroup SEPARATOR ",") FROM tResourceTypeGroup rtg WHERE rtg.resourceType=tResources.resourceType) FROM tResources INNER JOIN tResourceType rt1 ON tResources.resourceType = rt1.resourceType INNER JOIN tResourceGroup rg1 ON rt1.resourceGroup = rg1.resourceGroup INNER JOIN tResourceGroup rg2 ON rt1.resourceCategory = rg2.resourceGroup' + favJoin + ' WHERE ' + criteriaStr + ';'
-		cursor.execute(sqlStr)
+		sqlStr = """
+			SELECT
+				spawnID, spawnName, galaxy, entered, enteredBy, tResources.resourceType, rt1.resourceTypeName, rt1.resourceGroup,
+				CR, CD, DR, FL, HR, MA, PE, OQ, SR, UT, ER,
+				CASE WHEN COALESCE(rto.CRmax, rt1.CRmax) > 0 THEN ((CR - COALESCE(rto.CRmin, rt1.CRmin)) / (COALESCE(rto.CRmax, rt1.CRmax) - COALESCE(rto.CRmin, rt1.CRmin)))*100 ELSE NULL END AS CRperc,
+				CASE WHEN COALESCE(rto.CDmax, rt1.CDmax) > 0 THEN ((CD - COALESCE(rto.CDmin, rt1.CDmin)) / (COALESCE(rto.CDmax, rt1.CDmax) - COALESCE(rto.CDmin, rt1.CDmin)))*100 ELSE NULL END AS CDperc,
+				CASE WHEN COALESCE(rto.DRmax, rt1.DRmax) > 0 THEN ((DR - COALESCE(rto.DRmin, rt1.DRmin)) / (COALESCE(rto.DRmax, rt1.DRmax) - COALESCE(rto.DRmin, rt1.DRmin)))*100 ELSE NULL END AS DRperc,
+				CASE WHEN COALESCE(rto.FLmax, rt1.FLmax) > 0 THEN ((FL - COALESCE(rto.FLmin, rt1.FLmin)) / (COALESCE(rto.FLmax, rt1.FLmax) - COALESCE(rto.FLmin, rt1.FLmin)))*100 ELSE NULL END AS FLperc,
+				CASE WHEN COALESCE(rto.HRmax, rt1.HRmax) > 0 THEN ((HR - COALESCE(rto.HRmin, rt1.HRmin)) / (COALESCE(rto.HRmax, rt1.HRmax) - COALESCE(rto.HRmin, rt1.HRmin)))*100 ELSE NULL END AS HRperc,
+				CASE WHEN COALESCE(rto.MAmax, rt1.MAmax) > 0 THEN ((MA - COALESCE(rto.MAmin, rt1.MAmin)) / (COALESCE(rto.MAmax, rt1.MAmax) - COALESCE(rto.MAmin, rt1.MAmin)))*100 ELSE NULL END AS MAperc,
+				CASE WHEN COALESCE(rto.PEmax, rt1.PEmax) > 0 THEN ((PE - COALESCE(rto.PEmin, rt1.PEmin)) / (COALESCE(rto.PEmax, rt1.PEmax) - COALESCE(rto.PEmin, rt1.PEmin)))*100 ELSE NULL END AS PEperc,
+				CASE WHEN COALESCE(rto.OQmax, rt1.OQmax) > 0 THEN ((OQ - COALESCE(rto.OQmin, rt1.OQmin)) / (COALESCE(rto.OQmax, rt1.OQmax) - COALESCE(rto.OQmin, rt1.OQmin)))*100 ELSE NULL END AS OQperc,
+				CASE WHEN COALESCE(rto.SRmax, rt1.SRmax) > 0 THEN ((SR - COALESCE(rto.SRmin, rt1.SRmin)) / (COALESCE(rto.SRmax, rt1.SRmax) - COALESCE(rto.SRmin, rt1.SRmin)))*100 ELSE NULL END AS SRperc,
+				CASE WHEN COALESCE(rto.UTmax, rt1.UTmax) > 0 THEN ((UT - COALESCE(rto.UTmin, rt1.UTmin)) / (COALESCE(rto.UTmax, rt1.UTmax) - COALESCE(rto.UTmin, rt1.UTmin)))*100 ELSE NULL END AS UTperc,
+				CASE WHEN COALESCE(rto.ERmax, rt1.ERmax) > 0 THEN ((ER - COALESCE(rto.ERmin, rt1.ERmin)) / (COALESCE(rto.ERmax, rt1.ERmax) - COALESCE(rto.ERmin, rt1.ERmin)))*100 ELSE NULL END AS ERperc,
+				rt1.containerType, verified, verifiedBy, unavailable, unavailableBy, rg1.groupName, rt1.resourceCategory, rg2.groupName AS categoryName {favCols},
+				(SELECT GROUP_CONCAT(resourceGroup SEPARATOR ",") FROM tResourceTypeGroup rtg WHERE rtg.resourceType=tResources.resourceType)
+			FROM tResources
+				INNER JOIN tResourceType rt1 ON tResources.resourceType = rt1.resourceType
+				INNER JOIN tResourceGroup rg1 ON rt1.resourceGroup = rg1.resourceGroup
+				INNER JOIN tResourceGroup rg2 ON rt1.resourceCategory = rg2.resourceGroup
+				LEFT JOIN tResourceTypeOverrides rto ON rto.resourceType = tResources.resourceType AND rto.galaxyID = tResources.galaxy
+				{favJoin}
+			WHERE {criteriaStr};
+		""".format(favCols=favCols, favJoin=favJoin, criteriaStr=criteriaStr)
+
+		cursor.execute(sqlStr, {
+			'currentUser': currentUser,
+			'galaxy': ghShared.tryInt(galaxy),
+			'spawnID': ghShared.tryInt(spawnID),
+			'spawnName': spawnName
+		})
 		row = cursor.fetchone()
 
 		# get resource box if the spawn was found

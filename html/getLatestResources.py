@@ -27,6 +27,7 @@ import dbSession
 import dbShared
 import cgi
 import pymysql
+import ghShared
 import ghLists
 import ghObjects
 #
@@ -71,7 +72,7 @@ print('Content-type: text/html\n')
 print('<table width="100%" class=resourceStats>')
 if galaxy != '':
 	if logged_state == 1:
-		favJoin = ' LEFT JOIN (SELECT itemID, favGroup, units FROM tFavorites WHERE userID="' + currentUser + '" AND favType=1) favs ON tResources.spawnID = favs.itemID'
+		favJoin = 'LEFT JOIN (SELECT itemID, favGroup, units FROM tFavorites WHERE userID= %(currentUser)s AND favType=1) favs ON tResources.spawnID = favs.itemID'
 		favCols = ', favGroup, units'
 	else:
 		favJoin = ''
@@ -85,21 +86,31 @@ if galaxy != '':
 
 	cursor = conn.cursor()
 	if (cursor):
-		sqlStr1 = 'SELECT spawnID, spawnName, galaxy, entered, enteredBy, tResources.resourceType, resourceTypeName, resourceGroup,'
-		sqlStr1 += ' CR, CD, DR, FL, HR, MA, PE, OQ, SR, UT, ER,'
-		sqlStr1 += ' CASE WHEN CRmax > 0 THEN (((CASE WHEN CR IS NULL THEN 0 ELSE CR END)-CRmin) / (CRmax-CRmin))*100 ELSE NULL END AS CRperc,'
-		sqlStr1 += ' CASE WHEN CDmax > 0 THEN (((CASE WHEN CD IS NULL THEN 0 ELSE CD END)-CDmin) / (CDmax-CDmin))*100 ELSE NULL END AS CDperc,'
-		sqlStr1 += ' CASE WHEN DRmax > 0 THEN (((CASE WHEN DR IS NULL THEN 0 ELSE DR END)-DRmin) / (DRmax-DRmin))*100 ELSE NULL END AS DRperc,'
-		sqlStr1 += ' CASE WHEN FLmax > 0 THEN (((CASE WHEN FL IS NULL THEN 0 ELSE FL END)-FLmin) / (FLmax-FLmin))*100 ELSE NULL END AS FLperc,'
-		sqlStr1 += ' CASE WHEN HRmax > 0 THEN (((CASE WHEN HR IS NULL THEN 0 ELSE HR END)-HRmin) / (HRmax-HRmin))*100 ELSE NULL END AS HRperc,'
-		sqlStr1 += ' CASE WHEN MAmax > 0 THEN (((CASE WHEN MA IS NULL THEN 0 ELSE MA END)-MAmin) / (MAmax-MAmin))*100 ELSE NULL END AS MAperc,'
-		sqlStr1 += ' CASE WHEN PEmax > 0 THEN (((CASE WHEN PE IS NULL THEN 0 ELSE PE END)-PEmin) / (PEmax-PEmin))*100 ELSE NULL END AS PEperc,'
-		sqlStr1 += ' CASE WHEN OQmax > 0 THEN (((CASE WHEN OQ IS NULL THEN 0 ELSE OQ END)-OQmin) / (CASE WHEN OQmax-OQmin < 1 THEN 1 ELSE OQmax-OQmin END))*100 ELSE NULL END AS OQperc,'
-		sqlStr1 += ' CASE WHEN SRmax > 0 THEN (((CASE WHEN SR IS NULL THEN 0 ELSE SR END)-SRmin) / (SRmax-SRmin))*100 ELSE NULL END AS SRperc,'
-		sqlStr1 += ' CASE WHEN UTmax > 0 THEN (((CASE WHEN UT IS NULL THEN 0 ELSE UT END)-UTmin) / (UTmax-UTmin))*100 ELSE NULL END AS UTperc,'
-		sqlStr1 += ' CASE WHEN ERmax > 0 THEN (((CASE WHEN ER IS NULL THEN 0 ELSE ER END)-ERmin) / (ERmax-ERmin))*100 ELSE NULL END AS ERperc,'
-		sqlStr1 += ' containerType, verified, verifiedBy, unavailable, unavailableBy' + favCols + ' FROM tResources INNER JOIN tResourceType ON tResources.resourceType = tResourceType.resourceType' + favJoin + ' WHERE galaxy=' + galaxy + ' AND unavailable IS NULL ORDER BY entered DESC LIMIT 5;'
-		cursor.execute(sqlStr1)
+		sqlStr = """
+			SELECT
+				spawnID, spawnName, galaxy, entered, enteredBy, tResources.resourceType, resourceTypeName, resourceGroup,
+				CR, CD, DR, FL, HR, MA, PE, OQ, SR, UT, ER,
+				CASE WHEN COALESCE(rto.CRmax, rt1.CRmax) > 0 THEN (((CASE WHEN CR IS NULL THEN 0 ELSE CR END) - COALESCE(rto.CRmin, rt1.CRmin)) / (COALESCE(rto.CRmax, rt1.CRmax) - COALESCE(rto.CRmin, rt1.CRmin)))*100 ELSE NULL END AS CRperc,
+				CASE WHEN COALESCE(rto.CDmax, rt1.CDmax) > 0 THEN (((CASE WHEN CD IS NULL THEN 0 ELSE CD END) - COALESCE(rto.CDmin, rt1.CDmin)) / (COALESCE(rto.CDmax, rt1.CDmax) - COALESCE(rto.CDmin, rt1.CDmin)))*100 ELSE NULL END AS CDperc,
+				CASE WHEN COALESCE(rto.DRmax, rt1.DRmax) > 0 THEN (((CASE WHEN DR IS NULL THEN 0 ELSE DR END) - COALESCE(rto.DRmin, rt1.DRmin)) / (COALESCE(rto.DRmax, rt1.DRmax) - COALESCE(rto.DRmin, rt1.DRmin)))*100 ELSE NULL END AS DRperc,
+				CASE WHEN COALESCE(rto.FLmax, rt1.FLmax) > 0 THEN (((CASE WHEN FL IS NULL THEN 0 ELSE FL END) - COALESCE(rto.FLmin, rt1.FLmin)) / (COALESCE(rto.FLmax, rt1.FLmax) - COALESCE(rto.FLmin, rt1.FLmin)))*100 ELSE NULL END AS FLperc,
+				CASE WHEN COALESCE(rto.HRmax, rt1.HRmax) > 0 THEN (((CASE WHEN HR IS NULL THEN 0 ELSE HR END) - COALESCE(rto.HRmin, rt1.HRmin)) / (COALESCE(rto.HRmax, rt1.HRmax) - COALESCE(rto.HRmin, rt1.HRmin)))*100 ELSE NULL END AS HRperc,
+				CASE WHEN COALESCE(rto.MAmax, rt1.MAmax) > 0 THEN (((CASE WHEN MA IS NULL THEN 0 ELSE MA END) - COALESCE(rto.MAmin, rt1.MAmin)) / (COALESCE(rto.MAmax, rt1.MAmax) - COALESCE(rto.MAmin, rt1.MAmin)))*100 ELSE NULL END AS MAperc,
+				CASE WHEN COALESCE(rto.PEmax, rt1.PEmax) > 0 THEN (((CASE WHEN PE IS NULL THEN 0 ELSE PE END) - COALESCE(rto.PEmin, rt1.PEmin)) / (COALESCE(rto.PEmax, rt1.PEmax) - COALESCE(rto.PEmin, rt1.PEmin)))*100 ELSE NULL END AS PEperc,
+				CASE WHEN COALESCE(rto.OQmax, rt1.OQmax) > 0 THEN (((CASE WHEN OQ IS NULL THEN 0 ELSE OQ END) - COALESCE(rto.OQmin, rt1.OQmin)) / (CASE WHEN COALESCE(rto.OQmax, rt1.OQmax) - COALESCE(rto.OQmin, rt1.OQmin) < 1 THEN 1 ELSE COALESCE(rto.OQmax, rt1.OQmax) - COALESCE(rto.OQmin, rt1.OQmin) END))*100 ELSE NULL END AS OQperc,
+				CASE WHEN COALESCE(rto.SRmax, rt1.SRmax) > 0 THEN (((CASE WHEN SR IS NULL THEN 0 ELSE SR END) - COALESCE(rto.SRmin, rt1.SRmin)) / (COALESCE(rto.SRmax, rt1.SRmax) - COALESCE(rto.SRmin, rt1.SRmin)))*100 ELSE NULL END AS SRperc,
+				CASE WHEN COALESCE(rto.UTmax, rt1.UTmax) > 0 THEN (((CASE WHEN UT IS NULL THEN 0 ELSE UT END) - COALESCE(rto.UTmin, rt1.UTmin)) / (COALESCE(rto.UTmax, rt1.UTmax) - COALESCE(rto.UTmin, rt1.UTmin)))*100 ELSE NULL END AS UTperc,
+				CASE WHEN COALESCE(rto.ERmax, rt1.ERmax) > 0 THEN (((CASE WHEN ER IS NULL THEN 0 ELSE ER END) - COALESCE(rto.ERmin, rt1.ERmin)) / (COALESCE(rto.ERmax, rt1.ERmax) - COALESCE(rto.ERmin, rt1.ERmin)))*100 ELSE NULL END AS ERperc,
+				containerType, verified, verifiedBy, unavailable, unavailableBy{favCols}
+			FROM tResources
+				INNER JOIN tResourceType rt1 ON tResources.resourceType = rt1.resourceType
+				LEFT JOIN tResourceTypeOverrides rto ON rto.resourceType = tResources.resourceType AND rto.galaxyID = tResources.galaxy
+				{favJoin}
+			WHERE galaxy = %(galaxy)s AND unavailable IS NULL
+			ORDER BY entered DESC LIMIT 5;
+		""".format(favCols=favCols, favJoin=favJoin)
+
+		cursor.execute(sqlStr, {'galaxy': ghShared.tryInt(galaxy), 'currentUser': currentUser})
 		row = cursor.fetchone()
 		while (row != None):
 			s = ghObjects.resourceSpawn()

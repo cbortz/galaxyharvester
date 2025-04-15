@@ -23,6 +23,7 @@
 import sys
 import pymysql
 import dbShared
+import ghShared
 import optparse
 
 # Return position among server best
@@ -34,9 +35,9 @@ def getPosition(conn, spawnID, galaxy, statWeights, resourceGroup, serverBestMod
     # calculate column sort by based on quality weights
     for k, v in statWeights.items():
         weightVal = '%.2f' % v
-        obyStr = ''.join((obyStr, '+CASE WHEN ', k, 'max > 0 THEN (', k, ' / 1000)*', weightVal, ' ELSE ', weightVal, '*.25 END'))
+        obyStr += '+CASE WHEN COALESCE(rto.{0}max, rt1.{0}max) > 0 THEN ({0} / 1000)*{1} ELSE {1}*.25 END'.format(k, weightVal)
         obyStr2 = ''.join((obyStr2, '+', weightVal))
-        maxCheckStr = ''.join((maxCheckStr, '+', k, 'max'))
+        maxCheckStr += '+COALESCE(rto.{0}max, rt1.{0}max)'.format(k)
 
     if (obyStr != ''):
         obyStr = obyStr[1:]
@@ -51,15 +52,31 @@ def getPosition(conn, spawnID, galaxy, statWeights, resourceGroup, serverBestMod
     else:
         minimumPercentOfBest = .95
 
-    sqlStr1 = ''.join(('SELECT spawnID, (', obyStr, ') / (', obyStr2, ') AS overallScore, ', maxCheckStr, ' FROM tResources INNER JOIN tResourceType ON tResources.resourceType = tResourceType.resourceType',
-              ' INNER JOIN (SELECT resourceType FROM tResourceTypeGroup WHERE resourceGroup="', resourceGroup, '" OR resourceType="', resourceGroup, '" GROUP BY resourceType) rtg ON tResources.resourceType = rtg.resourceType'
-              ' WHERE galaxy=', str(galaxy), ' ORDER BY (', obyStr, ') / (' + obyStr2 + ')'
-              ' DESC LIMIT 8;'))
+    sqlStr1 = """
+        SELECT
+            spawnID,
+            ({obyStr}) / ({obyStr2}) AS overallScore,
+            {maxCheckStr}
+        FROM
+            tResources
+            INNER JOIN tResourceType rt1 ON tResources.resourceType = rt1.resourceType
+            LEFT JOIN tResourceTypeOverrides rto ON tResources.resourceType = rto.resourceType AND rto.galaxyID = tResources.galaxy
+            INNER JOIN (
+                    SELECT resourceType
+                    FROM tResourceTypeGroup
+                    WHERE resourceGroup=%(resourceGroup)s OR resourceType=%(resourceGroup)s
+                    GROUP BY resourceType
+                ) rtg ON tResources.resourceType = rtg.resourceType
+        WHERE galaxy=%(galaxy)s
+        ORDER BY ({obyStr}) / ({obyStr2})
+        DESC LIMIT 8;
+    """.format(obyStr=obyStr, obyStr2=obyStr2, maxCheckStr=maxCheckStr)
+
     cursor = conn.cursor()
 
     spawnPos = 0
     if (cursor):
-        cursor.execute(sqlStr1)
+        cursor.execute(sqlStr1, {'resourceGroup': resourceGroup, 'galaxy': ghShared.tryInt(galaxy)})
         row = cursor.fetchone()
         # Check is spawn in top 8 and within 5% quality of 1st
         rowPos = 1
